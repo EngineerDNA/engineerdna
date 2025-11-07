@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# Claude Code
+.claude
+.claudeignore
+
+# Build artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Development
+.env
+.env.local
+*.log
+
+# Documentation
+*.md
+!README.md
+PDR-*.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Testing
+coverage.txt
+*.cover

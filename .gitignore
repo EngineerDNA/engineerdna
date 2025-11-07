@@ -1,0 +1,294 @@
+# ============================================================================
+# EngineerDNA .gitignore
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Build Artifacts
+# ----------------------------------------------------------------------------
+# Go binaries
+/engineerdna
+/engineerdna-*
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+
+# Build output directories
+/bin/
+/dist/
+/build/
+/out/
+
+# Frontend build output (when added)
+/frontend/dist/
+/frontend/build/
+
+# ----------------------------------------------------------------------------
+# Go
+# ----------------------------------------------------------------------------
+# Go workspace file
+go.work
+go.work.sum
+
+# Coverage reports
+*.out
+coverage.txt
+coverage.html
+
+# Go vendor directory
+/vendor/
+
+# Go module cache (handled by system, not project)
+# Note: go.sum should be committed
+
+# ----------------------------------------------------------------------------
+# Database & Data Files
+# ----------------------------------------------------------------------------
+# SQLite databases (user data)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Database backups
+*.db.backup
+*.sql.backup
+
+# EngineerDNA user data directory
+# Note: This is in ~/.engineerdna/ so not in repo, but listing for clarity
+# ~/.engineerdna/
+
+# ----------------------------------------------------------------------------
+# Plugin Development
+# ----------------------------------------------------------------------------
+# Compiled plugins (Go binaries)
+/plugins/*/main
+/plugins/*/*/main
+/plugins/*/*.exe
+
+# Plugin development artifacts
+/plugins/*/.temp/
+/plugins/*/temp/
+/plugins/*/tmp/
+
+# User-installed plugins (in home directory, not repo)
+# ~/.engineerdna/plugins/
+
+# ----------------------------------------------------------------------------
+# Frontend (React + Vite)
+# ----------------------------------------------------------------------------
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Production build
+/frontend/dist/
+
+# Development
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables (if any)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# TypeScript
+*.tsbuildinfo
+
+# ----------------------------------------------------------------------------
+# IDE & Editors
+# ----------------------------------------------------------------------------
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (IntelliJ, GoLand, WebStorm)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*.swn
+*~
+.*.sw[a-z]
+tags
+
+# Emacs
+*~
+\#*\#
+.\#*
+.dir-locals.el
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Atom
+.atom/
+
+# ----------------------------------------------------------------------------
+# Operating System
+# ----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+# ----------------------------------------------------------------------------
+# Claude Code
+# ----------------------------------------------------------------------------
+# Claude Code logs and metrics
+.claude/logs/
+.claude/scripts/logs/
+
+# Local Claude Code settings (user-specific)
+.claude/settings.local.json
+
+# Claude Code hook outputs
+.claude/.hook-output/
+.claude/.edit-log.json
+
+# ----------------------------------------------------------------------------
+# Temporary Files
+# ----------------------------------------------------------------------------
+*.tmp
+*.temp
+*.bak
+*.swp
+*.log
+
+# Temporary directories
+.temp/
+.tmp/
+/tmp/
+temp/
+
+# ----------------------------------------------------------------------------
+# Documentation (Controlled)
+# ----------------------------------------------------------------------------
+# Ignore all markdown files by default (managed by hooks)
+*.md
+
+# Explicitly allow specific markdown files
+!.claude/agents/*.md
+!.claude/agents/*/*.md
+!.claude/commands/*.md
+!.claude/skills/**/*.md
+!.github/ISSUE_TEMPLATE/*.md
+!**/CLAUDE.md
+!/README.md
+!/CHANGELOG.md
+!/LICENSE.md
+!/CONTRIBUTING.md
+!/VERSIONING.md
+!/docs/**/*.md
+
+# ----------------------------------------------------------------------------
+# Archives & Compressed Files
+# ----------------------------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.bz2
+*.xz
+
+# Explicitly allow release archives
+!releases/*.tar.gz
+!releases/*.zip
+
+# ----------------------------------------------------------------------------
+# Security & Secrets
+# ----------------------------------------------------------------------------
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Secret keys and certificates
+*.key
+*.pem
+*.cert
+*.crt
+*.p12
+*.pfx
+
+# Encryption keys (except examples)
+master.key
+!master.key.example
+
+# ----------------------------------------------------------------------------
+# Testing & CI
+# ----------------------------------------------------------------------------
+# Test coverage
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# CI artifacts
+.github/workflows/*.log
+
+# ----------------------------------------------------------------------------
+# Misc
+# ----------------------------------------------------------------------------
+# Air (Go live reload tool) temp
+tmp/
+
+# golangci-lint cache
+.golangci.yml.cache
+
+# Task runner
+.task/
+
+# Make temporary files
+*.o
+*.a
+
+# Core dumps
+core
+*.core
