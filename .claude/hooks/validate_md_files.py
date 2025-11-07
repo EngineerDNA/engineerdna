@@ -50,6 +50,11 @@ def is_allowed_markdown_file(file_path: str, project_root: str) -> tuple[bool, s
         ('CHANGELOG.md', lambda p: p == 'CHANGELOG.md'),
         ('CONTRIBUTING.md', lambda p: p == 'CONTRIBUTING.md'),
         ('LICENSE.md', lambda p: p == 'LICENSE.md'),
+        ('CODE_OF_CONDUCT.md', lambda p: p == 'CODE_OF_CONDUCT.md'),
+
+        # GitHub OSS templates
+        ('.github/PULL_REQUEST_TEMPLATE.md', lambda p: p == '.github/PULL_REQUEST_TEMPLATE.md'),
+        ('.github/SECURITY.md', lambda p: p == '.github/SECURITY.md'),
 
         # PDR files (Product Development Records)
         ('PDR-*.md', lambda p: p.startswith('PDR-') and p.endswith('.md') and '/' not in p),
@@ -76,7 +81,8 @@ Allowed patterns:
   - .claude/commands/*.md
   - .claude/hooks/*.md
   - .claude/skills/**/*.md
-  - Root: README.md, CHANGELOG.md, CONTRIBUTING.md, LICENSE.md, PDR-*.md, PLAN.md, CONTEXT.md, TASKS.md
+  - Root: README.md, CHANGELOG.md, CONTRIBUTING.md, LICENSE.md, CODE_OF_CONDUCT.md, PDR-*.md, PLAN.md, CONTEXT.md, TASKS.md
+  - GitHub: .github/PULL_REQUEST_TEMPLATE.md, .github/SECURITY.md
 
 Instead:
   - For agent docs → agents/CLAUDE.md
@@ -86,6 +92,7 @@ Instead:
   - For workflows/patterns → .claude/skills/ (comprehensive guides)
   - For dev workflow → PLAN.md, CONTEXT.md, TASKS.md (use /create-dev-docs)
   - For product development records → PDR-*.md (gitignored)
+  - For OSS best practices → CODE_OF_CONDUCT.md, .github/SECURITY.md, .github/PULL_REQUEST_TEMPLATE.md
 """
     return (False, reason)
 

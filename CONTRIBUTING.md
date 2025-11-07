@@ -468,6 +468,80 @@ goreleaser release --snapshot --clean
 ls -la dist/
 ```
 
+## GitHub Repository Setup (Maintainers Only)
+
+This section documents the required GitHub repository settings for OSS best practices.
+
+### Required Repository Settings
+
+Navigate to repository `Settings` on GitHub.
+
+#### Branch Protection (Settings → Branches)
+
+Create branch protection rule for `main`:
+
+- Require pull request before merging (1 approval)
+- Require status checks to pass:
+  - Go Quality Checks
+  - Frontend Quality Checks
+  - Security Checks
+  - Documentation Checks
+  - Dependency Checks
+  - Build Matrix
+  - Quality Gate
+- Require conversation resolution
+- Require signed commits (recommended)
+- Require linear history
+- No force pushes
+- No deletions
+
+#### Security Settings (Settings → Security)
+
+Enable all security features:
+- Dependabot alerts
+- Dependabot security updates
+- Dependabot version updates (configured in `.github/dependabot.yml`)
+- CodeQL analysis
+- Secret scanning
+- Push protection (prevents committing secrets)
+- Private vulnerability reporting
+
+#### GitHub Actions (Settings → Actions)
+
+- Allow all actions and reusable workflows
+- Read and write permissions (for releases and artifacts)
+- Allow GitHub Actions to create and approve pull requests
+- Require approval for first-time contributors
+
+#### Community Settings (Settings → Community)
+
+- Add repository description and website
+- Add topics: `engineering-metrics`, `developer-productivity`, `analytics`, `go`, `react`, `sqlite`
+- Enable Discussions with categories:
+  - Announcements (Maintainers only)
+  - General
+  - Ideas (Feature requests)
+  - Q&A (Questions)
+  - Show and tell
+
+#### Files (Already Created)
+
+- `.github/ISSUE_TEMPLATE/` - Bug reports, feature requests, questions
+- `.github/PULL_REQUEST_TEMPLATE.md` - PR template with checklist
+- `.github/SECURITY.md` - Security policy and reporting
+- `.github/dependabot.yml` - Automated dependency updates
+- `CODE_OF_CONDUCT.md` - Contributor Covenant Code of Conduct
+
+### Verification Checklist
+
+After setup, verify:
+- Try pushing directly to main (should be blocked)
+- Try creating a PR without required checks (should be blocked)
+- Try committing a secret (should be blocked by push protection)
+- Check Dependabot is creating PRs for dependency updates
+- Verify issue templates appear when creating an issue
+- Verify PR template appears when creating a PR
+
 ## Questions?
 
 If you have questions about contributing:
