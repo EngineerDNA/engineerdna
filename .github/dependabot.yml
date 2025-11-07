@@ -88,25 +88,3 @@ updates:
       # Example: Ignore React major version updates until ready
       # - dependency-name: "react"
       #   update-types: ["version-update:semver-major"]
-
-  # Security updates for all ecosystems (runs daily)
-  - package-ecosystem: "gomod"
-    directory: "/"
-    schedule:
-      interval: "daily"
-      time: "03:00"
-      timezone: "America/Los_Angeles"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "security"
-      - "go"
-      - "automated"
-    commit-message:
-      prefix: "security"
-    reviewers:
-      - "EngineerDNA/security-team"
-    assignees:
-      - "EngineerDNA/security-team"
-    # Only create PRs for security updates
-    versioning-strategy: increase-if-necessary
