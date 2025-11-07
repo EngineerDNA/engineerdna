@@ -83,8 +83,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # Ignore specific packages if needed
-    ignore:
-      # Example: Ignore React major version updates until ready
-      # - dependency-name: "react"
-      #   update-types: ["version-update:semver-major"]
+    # Ignore specific packages if needed (uncomment and modify as needed)
+    # ignore:
+    #   - dependency-name: "react"
+    #     update-types: ["version-update:semver-major"]
