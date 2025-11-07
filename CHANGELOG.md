@@ -7,204 +7,283 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+## [1.0.0] - 2025-11-08
 
-**Dashboard Builder & Visualization System (PDR-8) - Complete**
+### What is EngineerDNA?
 
-*Backend (Weeks 1-2)*:
-- Migration 025: Dashboard System schema with dashboards and metric_snapshots tables
-- Dashboard data models (Dashboard, DashboardLayout, Widget, MetricSnapshot)
-- Dashboard repository layer with full CRUD operations
-- Metric snapshot computation service with hourly scheduler
-- 13 new API endpoints:
-  - GET/POST /api/dashboards - List/create dashboards with filtering
-  - GET /api/dashboards/{id} - Get dashboard by ID
-  - PUT /api/dashboards/{id} - Update dashboard layout and settings
-  - DELETE /api/dashboards/{id} - Delete dashboard (system dashboards protected)
-  - POST /api/dashboards/{id}/clone - Clone dashboard with new name
-  - GET /api/metrics/snapshots - Query pre-computed metric snapshots
-  - GET /api/metrics/aggregate - Single KPI values for Number Card widgets
-  - GET /api/metrics/timeseries - Time-series data for Timeseries Chart widgets
-  - GET /api/metrics/compare - Entity comparison for Bar Chart widgets
-  - GET /api/engineers/performance - Performance table data for Table widgets
-  - GET /api/metrics/health-status - System health for Status Indicator widgets
-  - GET /api/alerts/timeline - Alert overlays for chart widgets
-- Automated metric snapshot computation for org, team, and engineer levels
-- Metrics: PR volume, team scores, engineer scores, active alerts, active goals, cycle time
+**EngineerDNA v1 is an AI Chief of Staff for engineering leaders** - a local desktop application that transforms engineering data into actionable insights.
 
-*Frontend (Weeks 3-4)*:
-- React dashboard system with drag-and-drop grid layout (react-grid-layout)
-- 6 widget components (all presentational, dark mode, responsive):
-  - Number Card - Single KPI with comparison and change indicators
-  - Timeseries Chart - Line charts with Recharts, alert overlay markers
-  - Bar Chart - Horizontal/vertical comparison charts
-  - Table - Sortable performance tables with 6 columns
-  - Status Indicator - Color-coded system health (ok/warning/critical)
-  - Activity Feed - Scrollable recent events feed
-- Dashboard management UI:
-  - List view with templates and user dashboards
-  - Create, edit, delete, clone dashboards
-  - Add widgets modal with configuration
-  - Drag-and-drop widget positioning
-  - Responsive grid (breakpoints: lg/md/sm/xs/xxs)
-- 6 TanStack Query hooks for data fetching
-- Container/Presentational pattern strictly enforced
+**Core Value:**
+- **For Engineering Managers**: "Who needs my attention this week and what should I talk to them about?"
+- **For Directors/VPs**: "Is engineering slowing down, and if so, why?"
+- **For Product Leaders**: "Can we ship feature X by date Y?" (with data-backed answers)
 
-*Templates (Week 4)*:
-- 4 default dashboard templates automatically created on first run:
-  - Individual Contributor - Personal performance, goals, activity (7 widgets)
-  - Team Lead - Team performance, member comparison, alerts (7 widgets)
-  - Director - Org-wide metrics, team comparison, trends (7 widgets)
-  - Planning - Sprint planning, goal tracking, burndown (7 widgets)
-- All templates are system dashboards (cannot be deleted, can be cloned)
+**Key Principles:**
+- Privacy-first: Runs locally on your machine (localhost:3847), data never leaves your laptop
+- Single binary for macOS, Linux, Windows - no installation complexity
+- Extensible plugin architecture for any data source
+- Bring your own API keys (BYOK) for AI analysis
+- 100% open source, free forever
 
-*Developer Experience*:
-- TypeScript interfaces for all dashboard types
-- API client functions with type safety
-- Loading skeletons (no "Loading..." text)
-- Error boundaries for graceful failure
-- All components under 300 lines
-
-## [1.1.0] - 2025-11-07
+---
 
 ### Added
 
-**Alert System (Migration 018)**
-- Real-time operations alert engine for monitoring metrics and thresholds
-- Alert rules with configurable conditions and thresholds
-- Alert instances with severity levels (info, warning, critical)
-- Alert channels for Slack, email, and browser notifications
-- Alert delivery tracking with quiet hours support
-- 7 new API endpoints for alert management
+**Core Platform**
 
-**Goal Tracking System (Migration 019)**
+*Technology*:
+- Go 1.21+ backend with SQLite database
+- React 18 + TypeScript frontend with Vite
+- TanStack Query for data fetching
+- Recharts for visualizations
+- Tailwind CSS for styling
+- Single binary distribution with embedded frontend
+
+*Security & Privacy*:
+- Localhost-only binding (127.0.0.1:3847)
+- AES-256-GCM encryption for API keys and secrets
+- Master key storage in OS keychain with environment variable fallback
+- Three anonymization strategies: sequential (User_A, User_B), UUID, hash
+- Bidirectional anonymization mapping for deanonymization
+- Comprehensive audit logging for all data exports and AI processing
+
+**Plugin System**
+
+*Architecture*:
+- Three plugin types: Source (data IN), Destination (data OUT), Processor (transforms)
+- JSON-RPC communication over stdin/stdout
+- Subprocess isolation with configurable timeouts
+- Plugin discovery from ~/.engineerdna/plugins/ and ./plugins/
+- Plugin SDK for Go developers
+- Automatic anonymization for processor plugins sending to external APIs
+
+*Built-in Plugins*:
+- GitHub Source: Fetches issues and pull requests via GraphQL API
+- CSV Import: Flexible column mapping for custom metrics
+- Google Sheets Export: OAuth 2.0 integration for spreadsheet exports
+- AI Insights: Multi-provider support (Anthropic Claude, OpenAI GPT, Ollama) with BYOK
+
+**Identity Management**
+
+- Canonical identity system for tracking engineers across data sources
+- AI-powered identity matching with confidence scoring
+- Manual identity assignment and merging
+- CSV bulk import with intelligent column mapping
+- Team management interface at /team route
+- Activity metrics per engineer (PRs, reviews, issues, commits)
+- Backfill command to retroactively link events to engineers
+- 10 API endpoints for engineer and identity operations
+
+**Alert System**
+
+- Real-time operations monitoring with configurable rules
+- Alert types: threshold breach, change detection, anomaly detection
+- Severity levels: info, warning, critical
+- Multiple delivery channels: Slack, email, browser notifications
+- Lifecycle management: fired, acknowledged, snoozed, dismissed, resolved
+- Quiet hours support for off-hours
+- Alert delivery tracking
+- 7 API endpoints for alert management
+
+**Goal Tracking**
+
 - OKR-style goals with individual, team, and org-wide support
-- Goal milestones with target and current value tracking
+- Goal milestones with target vs current tracking
 - Progress logging with manual and automatic detection
-- Goal dependencies and blockers tracking
+- Goal dependencies and blocker tracking
 - Goal metrics for quantitative measurement
-- 9 new API endpoints for goal management
+- Trajectory tracking: on-track, at-risk, off-track
+- Performance review integration
+- 9 API endpoints for goal management
 
-**Skill Development Tracking (Migration 020)**
-- Skill taxonomy with technical, leadership, and communication categories
-- Engineer skill levels with proficiency scoring (0-100)
-- Evidence-based skill detection from PRs, reviews, and contributions
+**Skill Development**
+
+- Skill taxonomy: technical, leadership, communication categories
+- Proficiency scoring (0-100) for each engineer
+- Evidence-based skill detection from PRs, reviews, contributions
 - Skill progression tracking over time
 - Skill goals for targeted development
 - Peer comparison and skill gap identification
-- 3 new API endpoints for skill management
+- Trajectory detection: improving, stable, declining
+- 3 API endpoints for skill management
 
-**Cost and ROI Analysis (Migration 021)**
-- Cost configuration for engineers, teams, and org-wide defaults
-- Feature value estimation with ARR impact and confidence levels
+**Cost & ROI Analysis**
+
+- Cost configuration by engineer, team, or org-wide
+- Fully-loaded cost tracking (salary + benefits + overhead)
+- Feature value estimation with ARR impact
 - Feature work item mapping to engineering effort
 - ROI calculations with payback period analysis
-- Engineering investment breakdown by category
-- Cost efficiency metrics (cost per PR, per story point, per feature)
-- 8 new API endpoints for cost and ROI tracking
+- Engineering investment breakdown (features, tech debt, support, operations)
+- Cost efficiency metrics: per PR, per story point, per feature
+- 8 API endpoints for cost and ROI tracking
 
-**Manager Context System (Migration 022)**
+**Manager Context**
+
 - Manager notes with priority levels and visibility controls
 - Context annotations for metrics and events
 - Team context tracking for velocity and capacity changes
 - Sentiment surveys with anonymous responses
-- Sentiment analysis from multiple sources
-- 8 new API endpoints for manager context
+- Multi-source sentiment analysis with confidence scoring
+- Mood tracking over time
+- Qualitative data capture for performance reviews
+- 8 API endpoints for manager context
 
-**Predictive Analytics (Migration 023)**
-- Forecasting engine with multiple model types
-- Sprint completion, goal completion, and velocity predictions
+**Predictive Analytics**
+
+- Multiple forecasting models: linear regression, Monte Carlo, historical
+- Sprint completion predictions
+- Goal completion predictions
+- Velocity forecasting
 - What-if scenario modeling for capacity and timeline changes
-- Risk predictions (attrition, timeline miss, quality degradation, burnout)
-- Forecast accuracy tracking for model improvement
-- 16 new API endpoints for forecasting and scenarios
+- Risk predictions: attrition, timeline miss, quality degradation, burnout
+- Forecast accuracy tracking for continuous improvement
+- Confidence intervals for all predictions
+- 16 API endpoints for forecasting and scenarios
 
-**Action Tracking (Migration 024)**
+**Action Tracking**
+
 - AI-generated and manual recommendations
-- Action items with assignments and tracking
-- Action outcomes measurement for effectiveness
-- Recommendation lifecycle history
-- Follow-up scheduling and reminders
-- 9 new API endpoints for actions and recommendations
+- Action item assignments with owner tracking
+- Action outcome measurement for effectiveness
+- Recommendation lifecycle: pending, in-progress, completed, dismissed
+- Follow-up scheduling with reminders
+- Priority levels and expiration dates
+- Close the feedback loop on insights
+- 9 API endpoints for actions and recommendations
 
-**Additional Features**
-- Real-time metrics dashboard endpoint (GET /api/metrics/today)
-- Sprint burndown chart endpoint (GET /api/planning/sprint-burndown)
-- 35+ new database tables across 7 migrations
-- 70+ new API endpoints total
+**Dashboard Builder**
 
-### Changed
+*Backend*:
+- Flexible dashboard schema with JSON layout storage
+- Dashboard CRUD operations with templates
+- Metric snapshot computation service with hourly scheduler
+- Pre-computed snapshots for org, team, and engineer levels
+- Snapshot metrics: PR volume, team scores, engineer scores, alerts, goals, cycle time
 
-**Breaking Changes**
-- Pagination format updated for consistency across all list endpoints
-  - Old format: `{items: [], total: N, limit: N, offset: N}`
-  - New format: `{items: [], pagination: {total: N, limit: N, offset: N, hasMore: boolean}}`
-  - Affected endpoints: GET /api/events, GET /api/engineers, GET /api/exports
-- Clients must update to handle new pagination structure
+*Frontend*:
+- Drag-and-drop dashboard builder with react-grid-layout
+- Six widget types:
+  - Number Card: Single KPI with trend comparison
+  - Timeseries Chart: Line charts with alert overlay markers
+  - Bar Chart: Horizontal/vertical entity comparison
+  - Table: Sortable performance tables
+  - Status Indicator: Color-coded system health
+  - Activity Feed: Scrollable recent events
+- Four default templates:
+  - Individual Contributor: Personal performance and goals
+  - Team Lead: Team performance and member comparison
+  - Director: Org-wide metrics and team comparison
+  - Planning: Sprint planning and goal tracking
+- Dashboard management: create, edit, delete, clone
+- Widget configuration modal
+- Responsive grid with multiple breakpoints
+- Dark mode support
+- Loading skeletons and error boundaries
 
-### Database Migrations
-- Migration 018: Alert System (4 tables, 6 indexes)
-- Migration 019: Goal Tracking System (5 tables, 7 indexes)
-- Migration 020: Skill Development Tracking (5 tables, 7 indexes)
-- Migration 021: Cost and ROI Analysis (7 tables, 7 indexes)
-- Migration 022: Manager Context and Sentiment (6 tables, 7 indexes)
-- Migration 023: Predictive Analytics (5 tables, 7 indexes)
-- Migration 024: Action Tracking (5 tables, 8 indexes)
+*Data Layer*:
+- 13 dashboard and metrics API endpoints
+- TanStack Query hooks for data fetching
+- Container/presentational component pattern
+- TypeScript type safety throughout
+- Optimized queries for fast dashboard loads
 
-## [1.0.0] - 2025-11-04
+**Frontend Application**
 
-### Added
-- Identity Management System for tracking engineers across multiple data sources
-- Team page at `/team` for managing engineers and resolving identities
-- AI-powered identity matching with confidence scoring for suggested matches
-- CSV bulk import for engineers with intelligent column mapping
-- Engineer activity metrics display (pull requests, reviews, issues, commits)
-- 10 new API endpoints for engineer and identity management operations
-- Backfill command to retroactively link existing events to engineers
-- Automatic identity resolution when ingesting events from any source
-- Engineer create, read, update, and delete operations
-- Unresolved identities panel with suggestion workflow
-- Identity assignment and merging capabilities
-- Advanced Claude Code setup with agents, skills, and hooks
-- Full-stack engineer agent (Go + React/Vite)
-- Auto build-checking (go vet + npm typecheck)
+*Pages*:
+- Dashboard: Metrics overview with customizable widgets
+- Plugins: Plugin configuration and management
+- Events: Filterable event list
+- Team: Engineer management and identity resolution
+- Settings: System configuration
+
+*Components*:
+- Plugin card with status display
+- Plugin configuration modal
+- Anonymization settings
+- Event list with filtering
+- Insights panel for AI-generated recommendations
+- Audit log viewer
+- Velocity charts
+- Activity breakdown charts
+
+*Developer Experience*:
+- Type-safe API client with full coverage
+- Comprehensive TypeScript type definitions
+- Error handling with user-friendly messages
+- Request/response interceptors
+
+**Production Features**
+
+- First-run onboarding flow
+- Step-by-step setup wizard
+- Plugin configuration guidance
+- Graceful error recovery
+- User-friendly error messages
+- Plugin error diagnostics
+- Multiple export formats
+- Export scheduling
+- Automated exports
+- Dashboard loads in <2s with 10k+ events
+- Optimized database queries
+- Efficient metric computation
+
+**Distribution & Documentation**
+
+- Cross-platform builds: Linux (amd64), macOS (amd64/arm64), Windows (amd64)
+- GitHub Actions release pipeline
+- Automated version bumping
+- Single binary distribution
+- Comprehensive README
+- Plugin development guide
+- API documentation
+- Troubleshooting guide
+
+**Developer Tools**
+
+- Advanced Claude Code agent system with 8 specialized agents
+- Full-stack engineer agent for Go + React development
+- Quality, security, integration-checker, ui-tester, docs, advisor agents
+- Auto build-checking: go vet + npm typecheck
 - Skill auto-activation system
-- Version bump validation hook
+- 20+ hooks for workflow automation
+- Database migration enforcement
+- Automated dev server restart script
+- Frontend and backend hot reloading
+- Git hooks for code quality
+- Version bump validation
+- Dead code detection
 
-### Fixed
-- Fix orphaned foreign key references when assigning identities to events
-- Fix DNS rebinding vulnerability by binding to 127.0.0.1 instead of localhost
-- Fix activity metrics display error on Team page
-- Fix API query parameter filtering for identity suggestions
-- Fix CSV import implementation with proper validation
+### Database
 
-### Security
-- Bind server to 127.0.0.1 instead of localhost to prevent DNS rebinding attacks
-- Add CSV file validation and size limits for import operations
-- Enforce proper input validation on all identity management endpoints
+**25 migrations total**:
+- Core schema: events, plugins, users, anonymization, audit log
+- Alert System: 4 tables, 6 indexes
+- Goal Tracking: 5 tables, 7 indexes
+- Skill Development: 5 tables, 7 indexes
+- Cost & ROI: 7 tables, 7 indexes
+- Manager Context: 6 tables, 7 indexes
+- Predictive Analytics: 5 tables, 7 indexes
+- Action Tracking: 5 tables, 8 indexes
+- Dashboard System: 2 tables, 4 indexes
 
-## [0.1.0] - 2025-11-04
+### API Endpoints
 
-### Added
-- Initial project structure
-- Plugin architecture (Source, Destination, Processor)
-- SQLite database with event model
-- Anonymization system (sequential, uuid, hash strategies)
-- AES-256-GCM encryption for API keys
-- Audit logging for data exports
-- Plugin SDK for Go
-- Core plugins: github, csv-import, google-sheets-export, ai-insights
-- Single binary distribution (Go + embedded React)
-- Localhost-only security model (port 3847)
+**90+ endpoints organized by category**:
+- Core: 10 (health, version, events, metrics)
+- Plugins: 7 (list, configure, sync, test, status, enable, disable)
+- Identity: 10 (engineers, identities, resolution, bulk import)
+- Anonymization: 7 (policies, mappings, audit, reset, export)
+- Insights: 4 (list, generate, dismiss)
+- Exports: 4 (list, create, status)
+- Alerts: 7 (rules, instances, channels, acknowledge, snooze, dismiss)
+- Goals: 9 (goals, milestones, progress, dependencies, metrics)
+- Skills: 3 (taxonomy, engineer skills, evidence)
+- Cost & ROI: 8 (configuration, values, work items, calculations)
+- Manager Context: 8 (notes, annotations, surveys, sentiment)
+- Predictive: 16 (forecasts, scenarios, risks, accuracy)
+- Actions: 9 (recommendations, actions, outcomes, follow-ups)
+- Dashboards: 13 (dashboards, widgets, metrics, performance)
 
-### Architecture
-- Go 1.21+ backend with stdlib net/http
-- SQLite database (modernc.org/sqlite)
-- JSON-RPC plugin communication over stdin/stdout
-- Plugin discovery: ~/.engineerdna/plugins/ and ./plugins/
-- Master key in OS keychain or env var
-
-[Unreleased]: https://github.com/username/engineerdna/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/username/engineerdna/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/username/engineerdna/compare/v0.1.0...v1.0.0
-[0.1.0]: https://github.com/username/engineerdna/releases/tag/v0.1.0
+[Unreleased]: https://github.com/username/engineerdna/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/username/engineerdna/releases/tag/v1.0.0
