@@ -1,0 +1,136 @@
+# ============================================================================
+# SECURITY WARNING - NETWORK EXPOSURE CONFIGURATION
+# ============================================================================
+#
+# THIS CONFIGURATION EXPOSES ENGINEERDNA TO YOUR LOCAL NETWORK
+#
+# EngineerDNA V1 has NO built-in security:
+#   - NO authentication (anyone can access)
+#   - NO authorization (all data visible to anyone)
+#   - NO TLS/HTTPS (unencrypted traffic)
+#   - NO multi-user support
+#   - NO audit logging of who accessed what
+#
+# When you run this configuration:
+#   - Anyone on your WiFi can access http://YOUR_IP:3847
+#   - Anyone on your local network can view ALL engineering metrics
+#   - All data is transmitted UNENCRYPTED over the network
+#   - There is NO way to track who accessed what data
+#
+# USE THIS ONLY IF:
+#   - You are on a trusted, private network
+#   - You trust EVERYONE who has network access
+#   - You have firewall rules restricting access
+#   - You understand and accept the security risks
+#
+# For production use, wait for V2 which includes:
+#   - JWT authentication
+#   - Role-based authorization
+#   - TLS/HTTPS support
+#   - API key management
+#   - Audit logging
+#
+# ============================================================================
+
+services:
+  engineerdna:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: engineerdna
+    ports:
+      # WARNING: 3847:3847 exposes to ALL network interfaces
+      # This means anyone on your local network can access the application
+      - "3847:3847"
+    volumes:
+      # Persist data between container restarts
+      - engineerdna-data:/app/data
+      # Optional: Mount local plugins directory
+      # - ./plugins:/app/data/plugins:ro
+    environment:
+      # WARNING: 0.0.0.0 makes service accessible on local network
+      - ENGINEERDNA_HOST=0.0.0.0
+      - ENGINEERDNA_PORT=3847
+      # Optional: Set master encryption key
+      # - ENGINEERDNA_MASTER_KEY=your-base64-encoded-32-byte-key
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3847/api/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  engineerdna-data:
+    driver: local
+
+# ============================================================================
+# USAGE
+# ============================================================================
+#
+# Start:
+#   docker-compose -f docker-compose.network.yml up -d
+#
+# View logs:
+#   docker-compose -f docker-compose.network.yml logs -f
+#
+# Stop:
+#   docker-compose -f docker-compose.network.yml down
+#
+# Stop and remove data:
+#   docker-compose -f docker-compose.network.yml down -v
+#
+# Access:
+#   From your machine:   http://localhost:3847
+#   From other devices:  http://<your-machine-ip>:3847
+#
+# Find your IP:
+#   ip addr show  (Linux)
+#   ifconfig      (macOS)
+#   ipconfig      (Windows)
+#
+# ============================================================================
+# RECOMMENDED SECURITY MEASURES
+# ============================================================================
+#
+# 1. Firewall Rules (limit access to specific IPs):
+#    Linux/macOS:
+#      iptables -A INPUT -p tcp --dport 3847 -s 192.168.1.100 -j ACCEPT
+#      iptables -A INPUT -p tcp --dport 3847 -j DROP
+#
+#    macOS (pfctl):
+#      echo "block in proto tcp to port 3847" | sudo pfctl -f -
+#      echo "pass in proto tcp from 192.168.1.100 to port 3847" | sudo pfctl -f -
+#
+# 2. Reverse Proxy with Authentication (nginx, Caddy, Traefik):
+#    Example nginx config:
+#      location / {
+#        proxy_pass http://localhost:3847;
+#        auth_basic "EngineerDNA";
+#        auth_basic_user_file /etc/nginx/.htpasswd;
+#      }
+#
+# 3. VPN Access Only:
+#    - Use Tailscale, WireGuard, or OpenVPN
+#    - Only expose service on VPN interface
+#    - Requires VPN connection to access
+#
+# 4. SSH Tunnel (Most Secure):
+#    From remote machine:
+#      ssh -L 3847:localhost:3847 user@your-server
+#    Then access: http://localhost:3847
+#
+# ============================================================================
+# RISK ACKNOWLEDGMENT
+# ============================================================================
+#
+# By using this configuration, you acknowledge that:
+#
+#   1. You understand EngineerDNA V1 has NO authentication
+#   2. You understand all data will be visible to network users
+#   3. You understand all traffic is UNENCRYPTED
+#   4. You accept full responsibility for any data exposure
+#   5. You have considered and implemented appropriate security measures
+#
+# ============================================================================

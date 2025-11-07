@@ -1,0 +1,39 @@
+{
+  "name": "pdf-export",
+  "version": "1.0.0",
+  "type": "destination",
+  "description": "Export metrics to PDF reports",
+  "author": "EngineerDNA",
+  "config_fields": [
+    {
+      "name": "output_directory",
+      "type": "string",
+      "required": false,
+      "description": "Output directory for PDF files (defaults to ~/.engineerdna/exports/)",
+      "secret": false,
+      "default": ""
+    },
+    {
+      "name": "include_charts",
+      "type": "boolean",
+      "required": false,
+      "description": "Include charts in PDF report",
+      "secret": false,
+      "default": "true"
+    },
+    {
+      "name": "page_size",
+      "type": "select",
+      "required": false,
+      "description": "PDF page size",
+      "secret": false,
+      "default": "A4",
+      "options": ["A4", "Letter"]
+    }
+  ],
+  "anonymization": {
+    "required": false,
+    "strategy": "sequential",
+    "fields": ["actor", "author"]
+  }
+}

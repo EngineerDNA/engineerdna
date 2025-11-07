@@ -1,0 +1,83 @@
+# ============================================================================
+# EngineerDNA Docker Compose - SECURE LOCALHOST-ONLY CONFIGURATION
+# ============================================================================
+#
+# This configuration binds to localhost only (127.0.0.1:3847).
+# The application is ONLY accessible from your local machine.
+#
+# EngineerDNA V1 security model:
+#   - NO authentication (secured by OS login + localhost-only binding)
+#   - NO authorization (single-user application)
+#   - NO TLS/HTTPS (not needed for localhost traffic)
+#
+# This is the RECOMMENDED and SECURE default configuration.
+#
+# To expose to local network, see docker-compose.network.yml
+# For production deployments, use V2 (includes auth, TLS, RBAC)
+#
+# ============================================================================
+
+services:
+  engineerdna:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: engineerdna
+    ports:
+      # Localhost-only binding - SECURE (only accessible from your machine)
+      - "127.0.0.1:3847:3847"
+    volumes:
+      # Persist data between container restarts
+      - engineerdna-data:/app/data
+      # Optional: Mount local plugins directory
+      # - ./plugins:/app/data/plugins:ro
+    environment:
+      # 0.0.0.0 inside container allows Docker port mapping to work
+      # Port binding on host (127.0.0.1) ensures localhost-only access
+      - ENGINEERDNA_HOST=0.0.0.0
+      - ENGINEERDNA_PORT=3847
+      # Optional: Set master encryption key
+      # - ENGINEERDNA_MASTER_KEY=your-base64-encoded-32-byte-key
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3847/api/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  engineerdna-data:
+    driver: local
+
+# ============================================================================
+# USAGE
+# ============================================================================
+#
+# Start:
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs -f
+#
+# Stop:
+#   docker-compose down
+#
+# Stop and remove data:
+#   docker-compose down -v
+#
+# Access:
+#   http://localhost:3847 (ONLY from your machine)
+#
+# To expose to local network, use docker-compose.network.yml instead
+#
+# ============================================================================
+# NETWORK EXPOSURE (NOT RECOMMENDED)
+# ============================================================================
+#
+# If you need to expose to local network, use docker-compose.network.yml:
+#   docker-compose -f docker-compose.network.yml up -d
+#
+# This includes security warnings and hardening recommendations.
+#
+# ============================================================================

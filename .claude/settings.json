@@ -1,0 +1,190 @@
+{
+  "env": {
+    "CLAUDE_CODE_PARALLEL_TASKS": "10",
+    "BASH_DEFAULT_TIMEOUT_MS": "120000",
+    "BASH_MAX_TIMEOUT_MS": "6000000",
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "CLAUDE_CODE_ENABLE_AUDIT_LOG": "1"
+  },
+  "includeCoAuthoredBy": false,
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Skills auto-activation - suggests relevant skills before Claude sees prompt",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/activate_skills.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Enforce proper tool usage - block file operations in Bash",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_bash_usage.py"
+          },
+          {
+            "type": "command",
+            "comment": "Enforce restart script usage - block manual server management",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/enforce_restart_script.py"
+          },
+          {
+            "type": "command",
+            "comment": "Prevent direct commits to main branch",
+            "command": "jq -r '.tool_input.command' | grep -q 'git commit' && \"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/prevent_main_commits.sh || true"
+          },
+          {
+            "type": "command",
+            "comment": "Block emojis in git commits and PR operations",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_no_emojis.py"
+          },
+          {
+            "type": "command",
+            "comment": "Block development markers (TODO:, FIXME, HACK, etc.) in commits",
+            "command": "jq -r '.tool_input.command' | grep -q 'git commit' && \"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_no_dev_markers.sh || true"
+          },
+          {
+            "type": "command",
+            "comment": "Prevent AI from merging PRs directly - require user approval",
+            "command": "jq -r '.tool_input.command' | grep -qE 'gh pr merge' && { echo '[BLOCKED] AI agents cannot merge PRs directly. Please review the PR and merge manually if approved.' >&2; exit 2; } || true"
+          },
+          {
+            "type": "command",
+            "comment": "Block --no-verify flag in git commands (bypasses quality gates)",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/prevent_no_verify.py"
+          },
+          {
+            "type": "command",
+            "comment": "Enforce version bump and CHANGELOG update on main commits and PR creation",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_version_bump.py"
+          },
+          {
+            "type": "command",
+            "comment": "Check for dead code before commits to main (golangci-lint)",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_dead_code.py"
+          },
+          {
+            "type": "command",
+            "comment": "Enforce code formatting (gofmt, goimports, prettier)",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_formatting.py"
+          },
+          {
+            "type": "command",
+            "comment": "Ensure schema changes have migrations (Rule 9 and Rule 27)",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_schema_changes.py"
+          },
+          {
+            "type": "command",
+            "comment": "Block direct database modifications (Rule 9 and Rule 27)",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_db_operations.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Block unauthorized markdown file creation",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_md_files.py"
+          },
+          {
+            "type": "command",
+            "comment": "Enforce 500 LOC limit on source files",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_file_size.py"
+          },
+          {
+            "type": "command",
+            "comment": "Block emoji characters in code and documentation",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_no_emojis.py"
+          },
+          {
+            "type": "command",
+            "comment": "Enforce Container/Presentational pattern for React components",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_presentational_components.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Track file edits for build checking",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/track_edits.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Remind to rebuild after build commands",
+            "command": "jq -r '.tool_input.command' | grep -q 'go build\\|make build\\|npm run build' && echo 'Build complete. Backend: ./bin/engineerdna | Frontend: Check localhost:3847' || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Validate critical patterns (security, anti-patterns)",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/validate_critical_patterns.py"
+          },
+          {
+            "type": "command",
+            "comment": "Automatic build checking for Go errors",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/check_build.py"
+          },
+          {
+            "type": "command",
+            "comment": "Post-work checklist reminder",
+            "command": "printf '%s\\n' 'Post-work checklist:' 'Backend (Go):' '  - go vet ./...' '  - staticcheck ./...' '  - go test ./...' '  - make build' 'Frontend (when added):' '  - cd frontend && npm run lint' '  - npm run typecheck' '  - npm run build' 'Always:' '  - git diff (review changes)'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Environment verification on session start",
+            "command": "printf '%s\\n' 'Session started' \"Directory: $(pwd)\" \"Branch: $(git branch --show-current 2>/dev/null || echo 'not a git repo')\" '' 'Remember:' '- Pre-work: pwd, git status, go vet' '- Post-work: go vet, go test, make build (+ frontend checks when added)'"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "comment": "Check for ignored tool errors - blocks if errors not handled",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/check_ignored_errors.py"
+          },
+          {
+            "type": "command",
+            "comment": "Log agent completion metrics for monitoring",
+            "command": "\"${CLAUDE_PROJECT_DIR:?}\"/.claude/hooks/log_agent_metrics.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

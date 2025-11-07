@@ -1,0 +1,34 @@
+{
+  "name": "github",
+  "version": "1.0.0",
+  "type": "source",
+  "description": "GitHub Issues and Pull Requests",
+  "author": "EngineerDNA",
+  "config_fields": [
+    {
+      "name": "token",
+      "type": "password",
+      "required": true,
+      "description": "GitHub Personal Access Token",
+      "secret": true
+    },
+    {
+      "name": "org",
+      "type": "string",
+      "required": true,
+      "description": "Organization name"
+    },
+    {
+      "name": "repos",
+      "type": "string",
+      "required": false,
+      "description": "Comma-separated repo names (empty = all repos)",
+      "secret": false
+    }
+  ],
+  "anonymization": {
+    "required": false,
+    "strategy": "sequential",
+    "fields": ["actor", "author", "assignee"]
+  }
+}

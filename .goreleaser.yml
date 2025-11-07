@@ -1,0 +1,108 @@
+version: 2
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+    # Build frontend and embed in Go binary
+    - cd frontend && npm ci && npm run build
+
+builds:
+  - id: engineerdna
+    main: .
+    binary: engineerdna
+    ldflags:
+      # Strip debug info and symbol table for smaller binaries
+      - -s -w
+      # Inject version from git tag into main.Version variable
+      - -X main.Version={{.Version}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      # Disable CGO for static binaries (required for SQLite pure Go driver)
+      - CGO_ENABLED=0
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: "engineerdna-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format_overrides:
+      # Use zip for Windows
+      - goos: windows
+        format: zip
+    files:
+      # Include documentation in release archives
+      - README.md
+      - LICENSE.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      # Exclude CI/tooling changes from auto-generated changelog
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - '^style:'
+  groups:
+    - title: Features
+      regexp: '^feat'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix'
+      order: 1
+    - title: Security
+      regexp: '^sec'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: EngineerDNA
+    name: engineerdna
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## EngineerDNA {{ .Tag }}
+
+    Engineering metrics and insights platform with powerful plugin architecture.
+
+    ### Installation
+
+    Download the appropriate binary for your platform below, extract it, and run:
+
+    ```bash
+    # Linux/macOS
+    ./engineerdna serve
+
+    # Windows
+    engineerdna.exe serve
+    ```
+
+    Then open http://127.0.0.1:3847 in your browser.
+
+  footer: |
+    ### Full Changelog
+
+    See [CHANGELOG.md](https://github.com/EngineerDNA/engineerdna/blob/main/CHANGELOG.md) for detailed release notes.
+
+    ---
+
+    **Verification**: Download `checksums.txt` and verify your binary:
+    ```bash
+    sha256sum -c checksums.txt
+    ```

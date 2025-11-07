@@ -1,0 +1,10 @@
+module github.com/engineerdna/engineerdna/plugins/pdf-export
+
+go 1.25.3
+
+replace github.com/engineerdna/engineerdna/plugins/plugin-sdk => ../plugin-sdk
+
+require (
+	github.com/engineerdna/engineerdna/plugins/plugin-sdk v0.0.0-00010101000000-000000000000
+	github.com/jung-kurt/gofpdf v1.16.2
+)

@@ -1,0 +1,290 @@
+{
+  "plugin-development": {
+    "type": "workflow",
+    "enforcement": "mandatory",
+    "priority": "critical",
+    "promptTriggers": {
+      "keywords": [
+        "plugin",
+        "JSON-RPC",
+        "stdin",
+        "stdout",
+        "source plugin",
+        "destination plugin",
+        "processor plugin",
+        "plugin.json",
+        "plugin.info",
+        "plugin.configure"
+      ],
+      "intentPatterns": [
+        "(create|implement|add|build).*?plugin",
+        "plugin.*?(develop|create|test|debug)",
+        "JSON-RPC.*?(protocol|communication)",
+        "(source|destination|processor).*?plugin"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "plugins/**/*",
+        "internal/plugin/**/*.go",
+        "plugins/plugin-sdk/**/*"
+      ],
+      "contentPatterns": [
+        "plugin\\.info",
+        "plugin\\.configure",
+        "plugin\\.health"
+      ]
+    }
+  },
+  "database-migrations": {
+    "type": "workflow",
+    "enforcement": "mandatory",
+    "priority": "critical",
+    "promptTriggers": {
+      "keywords": [
+        "migration",
+        "database",
+        "schema",
+        "SQLite",
+        "table",
+        "column",
+        "ALTER",
+        "CREATE TABLE",
+        "schema change",
+        "add column",
+        "create table",
+        "add index",
+        "modify schema"
+      ],
+      "intentPatterns": [
+        "(create|add|modify|update|change).*?(table|column|schema|database)",
+        "(database|schema).*?(migration|change)",
+        "data.*?(migration|backfill)",
+        "add.*?(table|column|index)",
+        "modify.*?schema"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "migrations/**/*.sql",
+        "internal/db/**/*.go",
+        "internal/models/**/*.go"
+      ],
+      "contentPatterns": [
+        "CREATE TABLE",
+        "ALTER TABLE",
+        "CREATE INDEX",
+        "DROP TABLE"
+      ]
+    }
+  },
+  "dev-server-diagnostics": {
+    "type": "workflow",
+    "enforcement": "suggest",
+    "priority": "high",
+    "promptTriggers": {
+      "keywords": [
+        "localhost",
+        "not loading",
+        "server not responding",
+        "connection refused",
+        "port 3847",
+        "blank page",
+        "can't connect",
+        "server down",
+        "server issue",
+        "server not working",
+        "debug server",
+        "diagnose",
+        "troubleshoot"
+      ],
+      "intentPatterns": [
+        "localhost.*?(issue|problem|not working|error|won't load)",
+        "(server|engineerdna).*?(down|not responding|not working|issue)",
+        "can't.*?(connect|access).*?(localhost|server|3847)",
+        "(debug|diagnose|troubleshoot).*?(server|localhost)",
+        "connection.*?(refused|error|failed)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [],
+      "contentPatterns": []
+    }
+  },
+  "security-patterns": {
+    "type": "reference",
+    "enforcement": "mandatory",
+    "priority": "critical",
+    "promptTriggers": {
+      "keywords": [
+        "security",
+        "encryption",
+        "AES-256",
+        "master key",
+        "API key",
+        "secret",
+        "keychain",
+        "threat model",
+        "audit log",
+        "validation"
+      ],
+      "intentPatterns": [
+        "(encrypt|decrypt).*?(secret|key|credential)",
+        "security.*?(pattern|review|audit)",
+        "threat.*?model",
+        "(validate|sanitize).*?input"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "internal/config/encryption.go",
+        "internal/config/**/*.go"
+      ],
+      "contentPatterns": [
+        "AES-256-GCM",
+        "keychain",
+        "EncryptSecret"
+      ]
+    }
+  },
+  "testing-workflows": {
+    "type": "workflow",
+    "enforcement": "suggest",
+    "priority": "high",
+    "promptTriggers": {
+      "keywords": [
+        "test",
+        "testing",
+        "go test",
+        "table-driven",
+        "mock",
+        "unit test",
+        "integration test"
+      ],
+      "intentPatterns": [
+        "test.*?(plugin|feature|function)",
+        "(write|add|create).*?test",
+        "table-driven.*?test"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "**/*_test.go"
+      ],
+      "contentPatterns": [
+        "func Test",
+        "t.Run\\("
+      ]
+    }
+  },
+  "go-development": {
+    "type": "reference",
+    "enforcement": "suggest",
+    "priority": "high",
+    "promptTriggers": {
+      "keywords": [
+        "go patterns",
+        "go idioms",
+        "error handling",
+        "context",
+        "goroutine",
+        "channel",
+        "interface",
+        "struct",
+        "embedding"
+      ],
+      "intentPatterns": [
+        "(how|what).*?(go|golang).*?(pattern|idiom|convention)",
+        "go.*?(best practice|pattern)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "**/*.go"
+      ],
+      "contentPatterns": []
+    }
+  },
+  "frontend-development": {
+    "type": "reference",
+    "enforcement": "suggest",
+    "priority": "high",
+    "promptTriggers": {
+      "keywords": [
+        "component",
+        "React",
+        "Vite",
+        "TypeScript",
+        "frontend",
+        "UI",
+        "button",
+        "form",
+        "layout",
+        "page",
+        "hook",
+        "useState",
+        "useEffect",
+        "TanStack Query",
+        "Tailwind",
+        "CSS",
+        "npm",
+        "dashboard"
+      ],
+      "intentPatterns": [
+        "(create|implement|add|build).*?(component|UI|frontend|page|layout)",
+        "(React|Vite|frontend).*?(pattern|component|hook)",
+        "component.*?(create|add|build)",
+        "(style|CSS|Tailwind).*?(component|page)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        "frontend/src/**/*.tsx",
+        "frontend/src/**/*.ts",
+        "frontend/src/components/**/*",
+        "frontend/src/hooks/**/*"
+      ],
+      "contentPatterns": [
+        "export function.*Component",
+        "React\\.FC",
+        "useState\\(",
+        "useEffect\\(",
+        "className="
+      ]
+    }
+  },
+  "using-claude-code": {
+    "type": "reference",
+    "enforcement": "suggest",
+    "priority": "medium",
+    "promptTriggers": {
+      "keywords": [
+        "claude code",
+        "hook",
+        "skill",
+        "agent",
+        "slash command",
+        "subagent",
+        "reference pattern",
+        "progressive disclosure",
+        "skill structure",
+        "skill authoring",
+        "SKILL.md",
+        "skill-rules.json"
+      ],
+      "intentPatterns": [
+        "(create|add|modify).*?(hook|skill|agent|command)",
+        "(how|use).*?(claude code|hook|skill)",
+        "skill.*(pattern|structure|organization)"
+      ]
+    },
+    "fileTriggers": {
+      "pathPatterns": [
+        ".claude/**/*.md",
+        ".claude/hooks/**/*.py",
+        ".claude/hooks/**/*.sh"
+      ],
+      "contentPatterns": []
+    }
+  }
+}

@@ -1,0 +1,401 @@
+name: Quality Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+# Cancel in-progress runs for same PR/branch
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # ============================================================================
+  # Go Backend Quality Checks
+  # ============================================================================
+  go-quality:
+    name: Go Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --version  # Just install, we'll run manually
+
+      - name: Check Go formatting (gofmt)
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::The following files are not formatted with gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+          echo "All Go files are properly formatted"
+
+      - name: Check Go imports (goimports)
+        run: |
+          go install golang.org/x/tools/cmd/goimports@latest
+          unformatted=$(goimports -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::The following files have incorrect imports:"
+            echo "$unformatted"
+            exit 1
+          fi
+          echo "All Go imports are correct"
+
+      - name: Run go vet
+        run: |
+          echo "Running go vet..."
+          go vet ./...
+          echo "go vet passed"
+
+      - name: Run staticcheck
+        run: |
+          echo "Running staticcheck..."
+          staticcheck ./...
+          echo "staticcheck passed"
+
+      - name: Check for dead code (golangci-lint)
+        run: |
+          echo "Checking for dead code..."
+          golangci-lint run \
+            --enable=deadcode \
+            --enable=unused \
+            --enable=ineffassign \
+            --enable=structcheck \
+            --enable=varcheck \
+            ./...
+          echo "No dead code found"
+
+      - name: Run additional golangci-lint checks
+        run: |
+          echo "Running additional linters..."
+          golangci-lint run \
+            --enable=gosimple \
+            --enable=govet \
+            --enable=errcheck \
+            --enable=staticcheck \
+            --enable=typecheck \
+            ./...
+          echo "Additional linters passed"
+
+      - name: Build
+        run: |
+          echo "Building EngineerDNA..."
+          # Build with version from git
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          echo "Version: $VERSION"
+          go build -v -ldflags="-s -w -X main.Version=$VERSION" -o engineerdna .
+          echo "Build successful"
+
+      - name: Run tests
+        run: |
+          echo "Running tests..."
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+          echo "All tests passed"
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.txt
+          flags: unittests
+          fail_ci_if_error: false  # Don't fail if codecov is down
+
+      - name: Check test coverage
+        run: |
+          coverage=$(go tool cover -func=coverage.txt | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Test coverage: ${coverage}%"
+          # Warn if coverage is below 50% (not blocking yet)
+          if (( $(echo "$coverage < 50" | bc -l) )); then
+            echo "::warning::Test coverage is below 50% (${coverage}%)"
+          fi
+
+  # ============================================================================
+  # Frontend Quality Checks (when React is added)
+  # ============================================================================
+  frontend-quality:
+    name: Frontend Quality Checks
+    runs-on: ubuntu-latest
+    # Only run if frontend directory exists
+    if: hashFiles('frontend/package.json') != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Check TypeScript types
+        working-directory: frontend
+        run: |
+          echo "Running TypeScript type check..."
+          npm run typecheck
+          echo "TypeScript types are correct"
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: |
+          echo "Running ESLint..."
+          npm run lint
+          echo "ESLint passed"
+
+      - name: Check Prettier formatting
+        working-directory: frontend
+        run: |
+          echo "Checking Prettier formatting..."
+          npx prettier --check 'src/**/*.{ts,tsx,js,jsx,css,json}'
+          echo "All files are properly formatted"
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          echo "Building frontend..."
+          npm run build
+          echo "Frontend build successful"
+
+      # Frontend tests will be added in future
+      # - name: Run frontend tests
+      #   working-directory: frontend
+      #   run: |
+      #     echo "Running frontend tests..."
+      #     npm test -- --run --coverage
+      #     echo "All frontend tests passed"
+
+      # - name: Upload frontend coverage
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     files: ./frontend/coverage/coverage-final.json
+      #     flags: frontend
+      #     fail_ci_if_error: false
+
+  # ============================================================================
+  # Security Checks
+  # ============================================================================
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-no-fail -fmt sarif -out gosec.sarif ./...'
+
+      - name: Upload Gosec results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gosec.sarif
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Checking for hardcoded secrets..."
+          # Check for common secret patterns
+          if grep -r -E '(password|secret|api_key|apikey|token)\s*=\s*["\047][^"\047]{8,}["\047]' --include="*.go" --include="*.ts" --include="*.tsx" .; then
+            echo "::error::Potential hardcoded secrets found"
+            exit 1
+          fi
+          echo "No hardcoded secrets detected"
+
+      - name: Verify no .env files committed
+        run: |
+          if git ls-files | grep -E '\.env$|\.env\..*' | grep -v '\.env\.example\|\.env\.template'; then
+            echo "::error::.env files should not be committed"
+            exit 1
+          fi
+          echo "No .env files committed"
+
+  # ============================================================================
+  # Documentation Checks
+  # ============================================================================
+  documentation:
+    name: Documentation Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for broken markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          config-file: '.github/markdown-link-check.json'
+        continue-on-error: true  # Don't block on broken links
+
+      - name: Verify CHANGELOG updated (on PRs to main)
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          # Check if CHANGELOG.md was modified
+          if ! git diff --name-only origin/main...HEAD | grep -q "CHANGELOG.md"; then
+            echo "::error::CHANGELOG.md must be updated for PRs to main"
+            echo "Please add an entry to CHANGELOG.md describing your changes"
+            exit 1
+          fi
+          echo "CHANGELOG.md was updated"
+
+      - name: Verify version bump in CHANGELOG (on PRs to main)
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        run: |
+          # Extract version from current CHANGELOG
+          CURRENT_VERSION=$(grep -m 1 -oP '## \[\K[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md || echo "")
+
+          # Extract version from main branch CHANGELOG
+          git fetch origin main:main
+          MAIN_VERSION=$(git show main:CHANGELOG.md | grep -m 1 -oP '## \[\K[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "::error::No version found in CHANGELOG.md"
+            exit 1
+          fi
+
+          if [ "$CURRENT_VERSION" = "$MAIN_VERSION" ]; then
+            echo "::error::Version must be bumped in CHANGELOG.md (currently $CURRENT_VERSION)"
+            exit 1
+          fi
+
+          echo "Version bumped from $MAIN_VERSION to $CURRENT_VERSION"
+
+  # ============================================================================
+  # Dependency Checks
+  # ============================================================================
+  dependencies:
+    name: Dependency Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Check for Go module vulnerabilities
+        run: |
+          echo "Checking for known vulnerabilities in Go dependencies..."
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+          echo "No known vulnerabilities found"
+
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy
+          if ! git diff --exit-code go.mod go.sum; then
+            echo "::error::go.mod or go.sum is not tidy. Run 'go mod tidy' and commit the changes"
+            exit 1
+          fi
+          echo "go.mod and go.sum are tidy"
+
+  # ============================================================================
+  # Build Matrix (Cross-platform verification)
+  # ============================================================================
+  build-matrix:
+    name: Build Matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ['1.21']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Build
+        run: |
+          # Build with version from git
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          echo "Version: $VERSION"
+          go build -v -ldflags="-s -w -X main.Version=$VERSION" -o engineerdna${{ matrix.os == 'windows-latest' && '.exe' || '' }} .
+
+      - name: Run tests
+        run: go test -v ./...
+
+  # ============================================================================
+  # Quality Gate (Aggregate check)
+  # ============================================================================
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [go-quality, security, documentation, dependencies, build-matrix]
+    # Always run, even if some checks are skipped (like frontend)
+    if: always()
+    steps:
+      - name: Check quality gate
+        run: |
+          if [ "${{ needs.go-quality.result }}" != "success" ]; then
+            echo "::error::Go quality checks failed"
+            exit 1
+          fi
+          if [ "${{ needs.security.result }}" != "success" ]; then
+            echo "::error::Security checks failed"
+            exit 1
+          fi
+          if [ "${{ needs.documentation.result }}" != "success" ]; then
+            echo "::error::Documentation checks failed"
+            exit 1
+          fi
+          if [ "${{ needs.dependencies.result }}" != "success" ]; then
+            echo "::error::Dependency checks failed"
+            exit 1
+          fi
+          if [ "${{ needs.build-matrix.result }}" != "success" ]; then
+            echo "::error::Cross-platform build checks failed"
+            exit 1
+          fi
+          echo "All quality checks passed!"
+
+      - name: Summary
+        run: |
+          echo "## Quality Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Quality | ${{ needs.go-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | ${{ needs.documentation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependencies | ${{ needs.dependencies.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Matrix | ${{ needs.build-matrix.result }} |" >> $GITHUB_STEP_SUMMARY
