@@ -2,9 +2,7 @@ name: Quality Checks
 
 on:
   pull_request:
-    branches:
-      - main
-      - develop
+    # Run on all PRs regardless of target branch
   push:
     branches:
       - main
