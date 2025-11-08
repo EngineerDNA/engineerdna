@@ -22,6 +22,7 @@ CHECKED_EXTENSIONS = {
     '.php',                         # PHP
     '.swift',                       # Swift
     '.kt',                          # Kotlin
+    '.md',                          # Markdown (CLAUDE.md, README.md, etc.)
 }
 
 # Paths to exclude from size checks

@@ -190,7 +190,7 @@ Grep: pattern="credit" to verify credit system removed
 - **Meaningful Names**: Variables/methods clearly express business domain
 - **No Magic Numbers**: Constants for all literal values
 - **Specific Exception Handling**: Catch specific errors, not generic Exception
-- **YAGNI**: No unused code, DEPRECATED comments, TODO/FIXME/HACK, or over-engineering (Rule 35)
+- **YAGNI**: No unused code, DEPRECATED comments, TODO/FIXME/HACK, or over-engineering
 
 ### 4. Production Risk Patterns
 - **Performance**: N+1 queries, missing indexes, no pagination, unbounded queries
@@ -200,7 +200,7 @@ Grep: pattern="credit" to verify credit system removed
 - **Scalability**: Loading all records, synchronous when should be async, no caching
 
 ### 5. EngineerDNA Security Requirements
-- **Localhost Only (V1)**: App runs on 127.0.0.1:3847 (no network access)
+- **Localhost Only**: App runs on 127.0.0.1:3847 (no network access)
 - **Plugin Isolation**: Subprocess sandboxing with timeouts
 - **Encryption at Rest**: AES-256-GCM for API keys/secrets
 - **Input Validation**: Validate all user inputs, prevent SQL injection
@@ -212,7 +212,7 @@ Grep: pattern="credit" to verify credit system removed
 - **Deep Nesting**: >3 levels → use early returns/guard clauses
 - **God Classes**: Too many responsibilities → split
 - **Duplicate Code**: Same logic 3+ places → extract to shared utility
-- **Dead Code**: Unused exports, unreachable branches → remove (Rule 35)
+- **Dead Code**: Unused exports, unreachable branches → remove
 
 ## DECISION CRITERIA
 
@@ -229,7 +229,7 @@ Grep: pattern="credit" to verify credit system removed
 - Production risk patterns detected
 - Security vulnerability found
 - Over-engineered or unnecessarily complex
-- Dead/unused code present (Rule 35 violation)
+- Dead/unused code present
 - Copy-paste duplication (violates DRY)
 
 ## COMPLETENESS VERIFICATION
@@ -248,16 +248,6 @@ Before reporting APPROVED, verify:
 ## OUTPUT FORMAT
 
 ```yaml
-DECISION: [APPROVED/BLOCKED]
-
-IF APPROVED:
-  verified:
-    - SOLID compliance: [examples]
-    - Design patterns used: [which patterns]
-    - Security confirmed: [measures]
-    - Tests passing: [coverage]
-  ready_for: production
-
 IF BLOCKED:
   violations:
     - [SOLID principle]: [specific violation]
@@ -381,7 +371,7 @@ const projects = await repo.findAll({ limit: 20, offset: page * 20 });
 // file-a.ts: import { MAX_RETRIES } from '@/constants';
 ```
 
-### 7. DEPRECATED with TODO - Violates YAGNI (Rule 35)
+### 7. DEPRECATED with TODO - Violates YAGNI
 ```typescript
 // [BAD] Aspirational code
 /**
@@ -403,11 +393,11 @@ http.ListenAndServe(":3847", handler) // Binds to 0.0.0.0:3847
 // [BAD] Explicit all-interfaces binding
 http.ListenAndServe("0.0.0.0:3847", handler)
 
-// [GOOD] Localhost-only binding (V1 security model)
+// [GOOD] Localhost-only binding (security model)
 http.ListenAndServe("127.0.0.1:3847", handler) // Only local access
 ```
 
-### 9. UTC Timestamps (Rule 34)
+### 9. UTC Timestamps
 ```go
 // [BAD] Local time (breaks cross-timezone queries)
 now := time.Now() // Uses local timezone!
@@ -429,7 +419,7 @@ CREATE TABLE events (
 created_at := time.Now().UTC().Format(time.RFC3339)
 ```
 
-### 10. One-Off Database Scripts (Rule 33)
+### 10. One-Off Database Scripts
 ```go
 // [BAD] Direct database modification script
 // scripts/fix_events.go
@@ -495,7 +485,7 @@ if field.Secret {
 - **Anonymization**: Three strategies (sequential, uuid, hash), bidirectional mapping in DB
 - **Encryption**: AES-256-GCM for API keys/secrets, master key in OS keychain or env var
 - **Single Binary**: Frontend embedded via `//go:embed frontend/dist`, SQLite database
-- **Localhost-Only**: Runs on 127.0.0.1:3847 (no network authentication in V1)
+- **Localhost-Only**: Runs on 127.0.0.1:3847 (no network authentication)
 - **Audit Trail**: All exports and processor calls must be logged with anonymization status
 - **Plugin Manifests**: Plugins register capabilities (provides_metrics, provides_event_types, provides_widgets, provides_correlations)
 - **Temporal Attributes**: Attributes have valid_from/valid_until for tracking changes over time

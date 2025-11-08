@@ -175,7 +175,7 @@ After multiple unsuccessful attempts, return to orchestrator with blockers.
 
 Provide complete context for stateless agents:
 
-### For security agent:
+### For data-engineer agent:
 ```yaml
 TEST_RESULTS:
   - [test name]: [pass/fail]

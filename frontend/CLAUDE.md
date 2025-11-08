@@ -56,7 +56,6 @@ npm run build        # Production build → dist/
 ```
 
 Production build:
-
 ```bash
 cd frontend && npm run build
 cd .. && make build  # Embeds frontend/dist/ in Go binary
@@ -70,7 +69,6 @@ cd .. && make build  # Embeds frontend/dist/ in Go binary
 **Rule**: Separate data fetching from UI rendering
 
 **Presentational Components** (`components/`):
-
 ```typescript
 // CORRECT - Pure presentational component
 interface DashboardProps {
@@ -81,14 +79,11 @@ interface DashboardProps {
 
 export function Dashboard({ events, insights, isLoading }: DashboardProps) {
   // Only UI logic, no data fetching
-  const prCount = events.filter(e => e.type === 'pull_request').length;
-
   return <div>...</div>;
 }
 ```
 
 **Container Components** (`pages/`):
-
 ```typescript
 // CORRECT - Container handles data fetching
 export function DashboardPage() {
@@ -106,23 +101,13 @@ export function DashboardPage() {
 ```
 
 **Anti-Patterns** (DO NOT DO):
-
 ```typescript
 // WRONG - Component doing data fetching
 export function Dashboard() {
   const { data } = useQuery(...);  // NO! Move to page
-  const mutation = useMutation(...);  // NO! Move to page
-
   return <div>...</div>;
 }
 ```
-
-**Benefits**:
-
-- Components testable in isolation with mock props
-- Reusable in different contexts
-- Clear separation of concerns
-- Easier to refactor
 
 ### API Client
 
@@ -151,82 +136,9 @@ export function useEvents(filters?: EventFilters) {
     staleTime: 30000,
   });
 }
-
-// Usage
-function EventsPage() {
-  const { data: events, isLoading, error } = useEvents();
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage error={error} />;
-  return <EventList events={events} />;
-}
 ```
 
-### Components
-
-```typescript
-// components/EventList.tsx
-interface EventListProps {
-  events: Event[];
-  onEventClick?: (event: Event) => void;
-}
-
-export function EventList({ events, onEventClick }: EventListProps) {
-  return (
-    <div className="space-y-2">
-      {events.map((event) => (
-        <div key={event.id} onClick={() => onEventClick?.(event)}
-             className="p-4 border rounded hover:bg-gray-50">
-          <h3 className="font-bold">{event.type}</h3>
-          <p className="text-sm text-gray-600">{event.actor}</p>
-          <time className="text-xs">{new Date(event.timestamp).toLocaleString()}</time>
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
-### Routing
-
-```typescript
-// App.tsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
-export function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/plugins" element={<PluginsPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
-}
-```
-
-### Visualizations
-
-```typescript
-// components/charts/ThroughputChart.tsx
-import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-
-export function ThroughputChart({ events }: { events: Event[] }) {
-  const data = aggregateByDay(events);
-  return (
-    <LineChart width={600} height={300} data={data}>
-      <XAxis dataKey="date" />
-      <YAxis />
-      <Tooltip />
-      <Line type="monotone" dataKey="count" stroke="#8884d8" />
-    </LineChart>
-  );
-}
-```
-
-## TypeScript Types
+### TypeScript Types
 
 ```typescript
 // api/types.ts
@@ -234,13 +146,10 @@ export interface Event {
   id: string;
   type: string;
   source: string;
-  source_id: string;
   timestamp: string; // ISO 8601 UTC
   actor: string;
   data: Record<string, unknown>;
   anonymized: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface Plugin {
@@ -250,25 +159,14 @@ export interface Plugin {
   description: string;
   status: 'configured' | 'configuring' | 'failed' | 'disabled';
   config_fields: ConfigField[];
-  last_sync?: string;
 }
 
 export interface ConfigField {
   name: string;
   type: 'string' | 'password' | 'boolean' | 'select';
   required: boolean;
-  description: string;
   secret: boolean;
-  default?: string;
   options?: string[];
-}
-
-export interface Insight {
-  severity: 'info' | 'warning' | 'critical';
-  title: string;
-  description: string;
-  recommendation?: string;
-  metrics?: Record<string, number>;
 }
 ```
 
@@ -299,81 +197,32 @@ export interface Insight {
 **Configuration**: Tailwind config uses `darkMode: 'class'` strategy
 **Storage**: User preference persisted to localStorage as `engineerdna-theme`
 
-### How to Switch Themes
-
-**For Users**:
-
-- Click the theme toggle button in the top-right corner of the navigation bar
-- Sun icon = currently in light mode (click to switch to dark)
-- Moon icon = currently in dark mode (click to switch to light)
-- Preference is saved automatically and persists across sessions
-- On first visit, defaults to system preference
-
-**For Developers**:
-
-```typescript
-// Using the theme context
-import { useTheme } from '../contexts/ThemeContext';
-
-function MyComponent() {
-  const { theme, setTheme } = useTheme();
-
-  return (
-    <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
-      Toggle theme
-    </button>
-  );
-}
-```
-
 ### Dark Mode Implementation Rules
 
 **REQUIRED for all new components**:
 
 1. **Background colors**: Always provide dark variants
-
    ```tsx
    bg-white dark:bg-gray-800
    bg-gray-100 dark:bg-gray-900
-   bg-gray-50 dark:bg-gray-800
    ```
 
 2. **Text colors**: Always provide dark variants
-
    ```tsx
    text-gray-900 dark:text-gray-100
    text-gray-600 dark:text-gray-400
-   text-gray-500 dark:text-gray-500
    ```
 
 3. **Borders**: Always provide dark variants
-
    ```tsx
    border-gray-300 dark:border-gray-600
-   border-gray-200 dark:border-gray-700
    ```
 
-4. **Shadows**: Optional in dark mode (often disabled)
-
-   ```tsx
-   shadow-sm dark:shadow-none
-   ```
-
-5. **State colors**: Maintain accessibility in both themes
+4. **State colors**: Maintain accessibility in both themes
    ```tsx
    bg-blue-600 dark:bg-blue-500
    text-red-600 dark:text-red-400
-   bg-yellow-50 dark:bg-yellow-900/20
    ```
-
-### Loading Skeletons (Dark Mode)
-
-```tsx
-<div className="animate-pulse">
-  <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4 mb-2" />
-  <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/2" />
-</div>
-```
 
 ### Testing Dark Mode
 
@@ -381,7 +230,6 @@ function MyComponent() {
 2. Toggle theme using nav bar button
 3. Verify all components have proper contrast in both modes
 4. Check WCAG AA contrast ratio (4.5:1 for normal text, 3:1 for large text)
-5. Test focus states and interactive elements
 
 ## State Management
 
@@ -426,38 +274,65 @@ const [isOpen, setIsOpen] = useState(false);
 const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 ```
 
-## Testing
+## Common Patterns
 
-### Unit Tests
+### Loading States
 
-```typescript
-// hooks/useEvents.test.ts
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+```tsx
+function DashboardPage() {
+  const { data: events, isLoading, error, refetch } = useEvents();
 
-function wrapper({ children }) {
-  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
+  if (isLoading) {
+    return <div className="flex justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+    </div>;
+  }
+
+  if (error) {
+    return <div className="p-4 bg-red-50 border border-red-200 rounded">
+      <p className="text-red-800">Failed: {error.message}</p>
+      <button onClick={() => refetch()} className="mt-2 text-blue-600">Retry</button>
+    </div>;
+  }
+
+  return <EventList events={events} />;
 }
-
-test('useEvents fetches events', async () => {
-  const { result } = renderHook(() => useEvents(), { wrapper });
-  await waitFor(() => expect(result.current.isSuccess).toBe(true));
-  expect(result.current.data).toHaveLength(10);
-});
 ```
 
-### Integration Tests
+### Form Handling
 
-```typescript
-// components/EventList.test.tsx
-import { render, screen } from '@testing-library/react';
+```tsx
+function PluginConfigForm({ plugin }: { plugin: Plugin }) {
+  const [config, setConfig] = useState<Record<string, string>>({});
+  const mutation = useMutation({
+    mutationFn: (data) =>
+      apiClient('/plugins/configure', {
+        method: 'POST',
+        body: JSON.stringify({ name: plugin.name, config: data }),
+      }),
+  });
 
-test('renders events', () => {
-  const events = [{id: '1', type: 'pull_request', actor: 'alice@example.com', ...}];
-  render(<EventList events={events} />);
-  expect(screen.getByText('pull_request')).toBeInTheDocument();
-  expect(screen.getByText('alice@example.com')).toBeInTheDocument();
-});
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(config); }}>
+      {plugin.config_fields.map((field) => (
+        <div key={field.name}>
+          <label className="block text-sm font-medium">{field.name}</label>
+          <input
+            type={field.secret ? 'password' : 'text'}
+            value={config[field.name] || ''}
+            onChange={(e) => setConfig({ ...config, [field.name]: e.target.value })}
+            required={field.required}
+            className="mt-1 block w-full rounded border-gray-300"
+          />
+        </div>
+      ))}
+      <button type="submit" disabled={mutation.isPending}
+        className="px-4 py-2 bg-blue-600 text-white rounded">
+        {mutation.isPending ? 'Saving...' : 'Save'}
+      </button>
+    </form>
+  );
+}
 ```
 
 ## Build and Deployment
@@ -490,81 +365,6 @@ var frontendFS embed.FS
 
 frontend, _ := fs.Sub(frontendFS, "frontend/dist")
 http.Handle("/", http.FileServer(http.FS(frontend)))
-```
-
-## Common Patterns
-
-### Loading States
-
-```tsx
-function DashboardPage() {
-  const { data: events, isLoading, error, refetch } = useEvents();
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded">
-        <p className="text-red-800">Failed: {error.message}</p>
-        <button onClick={() => refetch()} className="mt-2 text-blue-600">
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  return <EventList events={events} />;
-}
-```
-
-### Form Handling
-
-```tsx
-function PluginConfigForm({ plugin }: { plugin: Plugin }) {
-  const [config, setConfig] = useState<Record<string, string>>({});
-  const mutation = useMutation({
-    mutationFn: (data) =>
-      apiClient('/plugins/configure', {
-        method: 'POST',
-        body: JSON.stringify({ name: plugin.name, config: data }),
-      }),
-  });
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        mutation.mutate(config);
-      }}
-    >
-      {plugin.config_fields.map((field) => (
-        <div key={field.name}>
-          <label className="block text-sm font-medium">{field.description}</label>
-          <input
-            type={field.secret ? 'password' : 'text'}
-            value={config[field.name] || ''}
-            onChange={(e) => setConfig({ ...config, [field.name]: e.target.value })}
-            required={field.required}
-            className="mt-1 block w-full rounded border-gray-300"
-          />
-        </div>
-      ))}
-      <button
-        type="submit"
-        disabled={mutation.isPending}
-        className="px-4 py-2 bg-blue-600 text-white rounded"
-      >
-        {mutation.isPending ? 'Saving...' : 'Save'}
-      </button>
-    </form>
-  );
-}
 ```
 
 ## Performance
@@ -604,47 +404,20 @@ function Dashboard({ events }) {
 
 ## Security
 
-### No Secrets
-
-```typescript
-// [BAD]
-const API_KEY = 'sk-abc123';
-
-// [GOOD]
-// Backend handles auth, frontend doesn't need keys
-```
-
-### Input Validation
-
-```typescript
-function sanitizeInput(value: string): string {
-  return value.trim().replace(/[<>]/g, '');
-}
-```
-
-### XSS Prevention
-
-```typescript
-// React escapes by default
-<div>{userInput}</div> // Safe
-
-// Dangerous: avoid dangerouslySetInnerHTML
-<div dangerouslySetInnerHTML={{ __html: userInput }} /> // Unsafe!
-```
+**No Secrets**: Backend handles auth, frontend doesn't need keys
+**Input Validation**: Sanitize user inputs
+**XSS Prevention**: React escapes by default (never use dangerouslySetInnerHTML)
 
 ## Troubleshooting
 
 **API calls fail with CORS**: Ensure Vite proxy configured in vite.config.ts
-
 **Build fails with TypeScript errors**: Run `npm run typecheck`
-
 **Hot reload not working**: Restart dev server, check for syntax errors
-
 **Blank page in production**: Verify `frontend/dist/` exists, rebuild Go binary
 
 ## References
 
-- Rule 35: All files under 500 lines
+- Rule: All files under 500 lines
 - Root CLAUDE.md: Project-wide context
 - Backend API: `internal/` directory
 - Vite: https://vite.dev

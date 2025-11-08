@@ -154,7 +154,7 @@ echo '{"prompt":"your test prompt"}' | \
 
 | Priority | When to Use | Example |
 |----------|-------------|---------|
-| critical | MUST run for correctness | Database migrations (Rule 33) |
+| critical | MUST run for correctness | Database migrations |
 | high | Strongly recommended | Deployment recovery, testing workflows |
 | medium | Helpful but optional | API testing, dev server checking |
 | low | Convenience/reference | Documentation lookup |
@@ -163,7 +163,7 @@ echo '{"prompt":"your test prompt"}' | \
 
 | Enforcement | Behavior | Example |
 |-------------|----------|---------|
-| mandatory | Blocks if not used | migrating-databases (Rule 33) |
+| mandatory | Blocks if not used | migrating-databases |
 | suggest | Shows suggestion only | Most skills |
 
 ### Type Categories

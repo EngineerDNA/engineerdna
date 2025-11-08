@@ -387,67 +387,6 @@ Check:
   2. Network tab for failed API calls
   3. React DevTools for component state
 Verify:
-  - API endpoint exists and returns data
-  - Component has error boundary
-  - Props are correct type
-```
-
-### 4. Form Submission Fails
-```yaml
-Issue: Form submit button does nothing
-Check:
-  1. Console for errors
-  2. Network tab for API call
-  3. Form validation state
-Verify:
-  - onClick handler exists
-  - Validation passes
-  - API endpoint works
-  - Loading state shows
-```
-
-### 5. Layout Breaks on Mobile
-```yaml
-Issue: Horizontal scroll or overlapping elements
-Check: Screenshot at mobile width
-  chrome_screenshot(width=375, height=667)
-Common causes:
-  - Fixed widths instead of responsive
-  - Missing media queries
-  - Overflow issues
-Fix: Report specific components that break
-```
-
-## FRONTEND-SPECIFIC PATTERNS
-
-### React Component Testing
-
-**Check for:**
-- Proper error boundaries
-- Loading states (Suspense)
-- Empty states (no data)
-- Error states (failed fetch)
-- Proper TypeScript types
-
-**Common patterns:**
-```typescript
-// [GOOD] Error boundary with fallback
-<ErrorBoundary fallback={<ErrorFallback />}>
-  <Suspense fallback={<Loading />}>
-    <DataComponent />
-  </Suspense>
-</ErrorBoundary>
-
-// [BAD] No error handling
-<DataComponent />
-```
-
-### TanStack Query Testing
-
-**Verify:**
-- Loading states work
-- Error states work
-- Refetching works
 - Cache invalidation works
 - Optimistic updates work (if used)
 
@@ -494,9 +433,9 @@ FIX_REQUIRED:
   - [code location]
 ```
 
-## CURRENT STATUS (V1)
+## CURRENT STATUS
 
-EngineerDNA V1 has no frontend yet (planned for Phase 2+).
+EngineerDNA has no frontend yet (planned for Phase 2+).
 
 When frontend is added:
 1. Run frontend dev server or build embedded frontend

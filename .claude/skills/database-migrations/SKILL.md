@@ -9,7 +9,7 @@ disallowedTools: Write, Edit
 
 ## Purpose
 
-Master database schema evolution with SQLite migrations. **NEVER use one-off scripts** (Rule 33) - always use migrations for reproducibility, version control, and safety.
+Master database schema evolution with SQLite migrations. **NEVER use one-off scripts** - always use migrations for reproducibility, version control, and safety.
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ git add migrations/004_add_plugin_config.sql internal/db/
 git commit -m "Add plugin_configs table"
 ```
 
-## Critical Rule: No One-Off Scripts (Rule 33)
+## Critical Rule: No One-Off Scripts
 
 **NEVER** create standalone database scripts. **ALWAYS** use migrations in `migrations/` directory.
 
@@ -242,7 +242,7 @@ Always commit migration and code changes together.
 
 ## References
 
-- Rule 33: NO one-off DB scripts, always use migrations
-- Rule 34: UTC timestamps everywhere (`time.Now().UTC()`)
+- Rule: NO one-off DB scripts, always use migrations
+- Rule: UTC timestamps everywhere (`time.Now().UTC()`)
 - Hook: `validate_schema_changes.py` enforces migrations
 - Hook: `validate_db_operations.py` blocks direct DB commands

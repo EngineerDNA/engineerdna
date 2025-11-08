@@ -19,7 +19,7 @@ The `.claude/` directory contains all Claude Code configuration for the Engineer
 │   ├── CLAUDE.md               # Agent architecture guide
 │   ├── engineer.md             # Full-stack implementation (Go + React)
 │   ├── quality.md              # Testing and verification
-│   ├── security.md             # Security review
+│   ├── data-engineer.md        # Data integrity and database patterns
 │   ├── integration-checker.md  # Plugin system testing
 │   ├── ui-tester.md            # Frontend/UI testing
 │   ├── docs.md                 # Documentation management
@@ -98,7 +98,7 @@ Specialized AI assistants for specific tasks. Automatically invoked by Claude or
 
 ### Agent Pipeline (for new features)
 ```
-engineer → quality → integration-checker → security → ui-tester → docs → advisor
+engineer → quality → integration-checker → data-engineer → ui-tester → docs → advisor
 ```
 
 ### Key Agents
@@ -115,9 +115,9 @@ engineer → quality → integration-checker → security → ui-tester → docs
 - When: "plugin system", "test plugins", "JSON-RPC", "plugin discovery", "integration test"
 - Output: Plugin system verification, integration test results
 
-**security**: Security review
-- When: Security audit, encryption, validation
-- Output: Security verification, vulnerabilities found
+**data-engineer**: Data integrity and database patterns
+- When: Schema changes, migrations, UTC timestamps, multi-modal data, query optimization
+- Output: Data integrity verification, migration compliance
 
 **ui-tester**: Frontend/UI testing
 - When: "test UI", "frontend broken", "component not rendering", "React errors"
@@ -135,8 +135,8 @@ engineer → quality → integration-checker → security → ui-tester → docs
 
 **Automatic** (Claude decides):
 ```
-> I need to add encryption for API keys
-Claude uses: engineer → quality → security → advisor
+> I need to add a new table for tracking metrics
+Claude uses: engineer → quality → data-engineer → advisor
 
 > Create a dashboard component to display metrics
 Claude uses: engineer (frontend mode) → ui-tester → advisor
@@ -166,7 +166,7 @@ Complex multi-file workflows. Automatically invoked when relevant or explicitly 
 
 ### database-migrations
 - **When**: Schema changes, migrations, database operations
-- **Does**: Guides safe database evolution with SQLite migrations (enforces Rule 9 and Rule 27)
+- **Does**: Guides safe database evolution with SQLite migrations
 
 ### dev-server-diagnostics
 - **When**: "localhost not loading", "server not responding", connection errors
@@ -253,9 +253,9 @@ Event-driven automation. Runs automatically at specific points.
 
 | Workflow | Steps | Notes |
 |----------|-------|-------|
-| New Feature | Implement → quality → security → advisor | Agent pipeline auto-invoked |
-| Bug Fix | Fix → quality → security | Engineer agent direct |
-| Security Audit | security agent review | Reviews encryption, validation |
+| New Feature | Implement → quality → data-engineer → advisor | Agent pipeline auto-invoked |
+| Bug Fix | Fix → quality → data-engineer | Engineer agent direct |
+| Security Audit | data-engineer agent review | Reviews encryption, validation |
 | Code Review | advisor agent review | Final production readiness |
 
 ### Quick Reference

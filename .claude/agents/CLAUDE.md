@@ -5,11 +5,11 @@
 For EngineerDNA development:
 
 ```
-engineer → quality → integration-checker → security → ui-tester → docs → advisor
+engineer → quality → integration-checker → data-engineer → ui-tester → docs → advisor
 ```
 
 **Simplified pipelines:**
-- Backend only: `engineer → quality → integration-checker → security → advisor`
+- Backend only: `engineer → quality → integration-checker → data-engineer → advisor`
 - Frontend only: `engineer → quality → ui-tester → advisor`
 - Docs only: `docs → advisor`
 
@@ -20,7 +20,7 @@ Each agent has ONE focused purpose:
 - **engineer**: Implementation only (Go + React)
 - **quality**: Testing and verification only
 - **integration-checker**: Plugin system integration testing only
-- **security**: Security review only
+- **data-engineer**: Data integrity and database patterns only
 - **ui-tester**: Frontend/UI testing only
 - **docs**: Documentation management only
 - **advisor**: Final production readiness review only
@@ -82,21 +82,22 @@ VERIFICATION_COMPLETED:
   - go test: result
 ```
 
-### Integration-Checker → Security
+### Integration-Checker → Data-Engineer
 ```yaml
 INTEGRATION_VERIFIED:
   - Plugin discovery: status
   - JSON-RPC: status
-  - Encryption: status
+  - Database operations: status
 PLUGINS_TESTED:
   - plugin: all methods verified
 ```
 
-### Security → UI-Tester (if frontend changes)
+### Data-Engineer → UI-Tester (if frontend changes)
 ```yaml
-SECURITY_VERIFIED:
-  - encryption: verified
-  - validation: verified
+DATA_INTEGRITY_VERIFIED:
+  - migrations: all schema changes in migrations/
+  - UTC timestamps: verified
+  - multi-modal data: consistent
 FRONTEND_CHANGES:
   - files: list of changed files
 ```
@@ -124,7 +125,7 @@ DOCUMENTATION_COMPLETE:
 **engineer**: All tools (Read, Write, Edit, Bash, Grep, Glob)
 **quality**: Read-only + Bash (Bash, Read, Grep, Glob)
 **integration-checker**: Read-only + Bash (Bash, Read, Grep, Glob)
-**security**: Read-only (Read, Grep, Glob)
+**data-engineer**: Read-only (Read, Grep, Glob)
 **ui-tester**: Read-only + Bash + Chrome MCP (Bash, Read, Grep, Glob, chrome_*)
 **docs**: Read + Write (Read, Write, Edit, Grep, Glob)
 **advisor**: Read-only (Read, Grep, Glob)
@@ -137,7 +138,7 @@ Claude invokes agents based on task description keywords in agent frontmatter.
 ### Explicit
 ```
 > Use the go-engineer agent to implement the plugin system
-> Have the security agent review the encryption implementation
+> Have the data-engineer agent review the encryption implementation
 ```
 
 ### One Task = One Invocation
@@ -160,7 +161,7 @@ Do NOT pass todo lists to agents. One task at a time.
 - Follows Go idioms and patterns
 - Uses stdlib before external deps
 - Enforces error handling
-- NO aspirational code (Rule 29: YAGNI)
+- NO aspirational code
 
 ### quality
 - Verifies tests pass
@@ -177,11 +178,12 @@ Do NOT pass todo lists to agents. One task at a time.
 - CANNOT write code
 - Returns to engineer if integration fails
 
-### security
-- Reviews threat model compliance
-- Validates encryption patterns
-- Checks input validation
-- Verifies no secrets in code
+### data-engineer
+- Verifies schema migrations compliance
+- Checks UTC timestamp usage
+- Validates multi-modal data consistency
+- Ensures repository pattern compliance
+- Checks query optimization (no N+1)
 - CANNOT fix issues, only report
 
 ### ui-tester

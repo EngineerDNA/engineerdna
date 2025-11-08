@@ -22,7 +22,7 @@ Bring **event data** IN to EngineerDNA (GitHub, Jira, GitLab).
 
 **Optional**: Declare `provides_event_types` for event normalization.
 
-### Metric Source Plugins (PDR-9)
+### Metric Source Plugins
 
 Bring **metric data** IN to EngineerDNA (AWS Cost, team capacity, budget tracking).
 
@@ -30,7 +30,7 @@ Bring **metric data** IN to EngineerDNA (AWS Cost, team capacity, budget trackin
 
 **Must Declare**: `provides_metrics` in plugin.json with metric specifications.
 
-### Attribute Source Plugins (PDR-9)
+### Attribute Source Plugins
 
 Bring **entity attributes** IN to EngineerDNA (HRIS, org charts, team metadata).
 
@@ -64,9 +64,6 @@ plugins/
 │   ├── protocol.go             # JSON-RPC helpers
 │   └── sdk.go                  # Plugin server
 ├── github/                      # Source plugin
-│   ├── plugin.json
-│   ├── main.go
-│   └── github                  # Binary
 ├── google-sheets-export/        # Destination plugin
 ├── ai-insights/                 # Processor plugin
 └── csv-import/                  # Source plugin
@@ -97,74 +94,36 @@ plugins/
 
 ## Quick Start with SDK
 
-### Create Plugin
+See reference implementations in `plugins/github/` and `plugins/csv-import/` for complete examples.
+
+### Minimal Plugin
 
 ```go
 package main
+import sdk "github.com/engineerdna/engineerdna/plugins/plugin-sdk"
 
-import (
-    "github.com/engineerdna/engineerdna/plugins/plugin-sdk"
-    "time"
-)
-
-type MyPlugin struct {
-    apiKey string
-}
+type MyPlugin struct { apiKey string }
 
 func (p *MyPlugin) Info() sdk.PluginInfo {
-    return sdk.PluginInfo{
-        Name:        "my-plugin",
-        Version:     "1.0.0",
-        Type:        "source",
-        Description: "My custom source plugin",
-        ConfigFields: []sdk.ConfigField{
-            {Name: "api_key", Type: "password", Required: true, Secret: true},
-        },
-    }
+    return sdk.PluginInfo{Name: "my-plugin", Version: "1.0.0", Type: "source"}
 }
-
-func (p *MyPlugin) Configure(config map[string]interface{}) error {
-    p.apiKey = config["api_key"].(string)
-    return nil
+func (p *MyPlugin) Configure(cfg map[string]interface{}) error {
+    p.apiKey = cfg["api_key"].(string); return nil
 }
-
 func (p *MyPlugin) Health() (sdk.HealthResult, error) {
-    return sdk.HealthResult{Healthy: true, Message: "OK"}, nil
+    return sdk.HealthResult{Healthy: true}, nil
 }
-
 func (p *MyPlugin) Sync(params sdk.SyncParams) (sdk.SyncResult, error) {
-    events := []sdk.Event{
-        {
-            Type:      "custom_event",
-            Source:    "my-plugin",
-            SourceID:  "evt_123",
-            Timestamp: time.Now().UTC(),
-            Actor:     "user@example.com",
-            Data:      map[string]interface{}{"key": "value"},
-        },
-    }
-    return sdk.SyncResult{Events: events}, nil
+    return sdk.SyncResult{Events: []sdk.Event{{...}}}, nil
 }
-
-func main() {
-    plugin := &MyPlugin{}
-    server := sdk.NewPluginServer(plugin)
-    server.Start()
-}
+func main() { sdk.NewPluginServer(&MyPlugin{}).Start() }
 ```
 
 ### Build & Test
 
 ```bash
-# Build
-cd plugins/my-plugin
-go build -o my-plugin
-chmod +x my-plugin
-
-# Test
+cd plugins/my-plugin && go build -o my-plugin && chmod +x my-plugin
 echo '{"jsonrpc":"2.0","method":"plugin.info","id":"1"}' | ./my-plugin | jq .
-echo '{"jsonrpc":"2.0","method":"plugin.configure","params":{"api_key":"test"},"id":"2"}' | ./my-plugin
-echo '{"jsonrpc":"2.0","method":"source.sync","params":{"since":"2025-01-01T00:00:00Z"},"id":"3"}' | ./my-plugin
 ```
 
 ## JSON-RPC Protocol
@@ -222,12 +181,7 @@ All plugins implement:
 
 ```json
 Request: {"method": "source.sync", "params": {"since": "2025-11-01T00:00:00Z"}}
-Response: {
-  "result": {
-    "events": [{"type": "pull_request", "source": "github", ...}],
-    "warnings": ["Skipped 2 draft PRs"]
-  }
-}
+Response: {"result": {"events": [...], "warnings": [...]}}
 ```
 
 ## Destination Methods
@@ -235,61 +189,16 @@ Response: {
 **destination.test**: Test connection
 **destination.export**: Export data
 
-```json
-Request: {
-  "method": "destination.export",
-  "params": {
-    "data_type": "events",
-    "data": {"events": [...], "period_start": "...", "period_end": "..."},
-    "options": {"format": "summary"}
-  }
-}
-Response: {
-  "result": {
-    "status": "success",
-    "url": "https://docs.google.com/spreadsheets/d/abc123",
-    "rows_written": 100
-  }
-}
-```
-
 ## Processor Methods
 
 **processor.capabilities**: List analysis types
 **processor.analyze**: Analyze events
 
-```json
-Request: {
-  "method": "processor.analyze",
-  "params": {
-    "analysis_type": "team-insights",
-    "events": [...],
-    "context": {"team_size": 8}
-  }
-}
-Response: {
-  "result": {
-    "insights": [
-      {
-        "severity": "warning",
-        "title": "High PR review time",
-        "description": "Average review time: 3.5 days",
-        "recommendation": "Consider setting review SLAs"
-      }
-    ]
-  }
-}
-```
-
-## Metric Source Methods (PDR-9)
+## Metric Source Methods
 
 **metric_source.sync**: Fetch metric values since timestamp
 
 ```json
-Request: {
-  "method": "metric_source.sync",
-  "params": {"since": "2025-11-01T00:00:00Z"}
-}
 Response: {
   "result": {
     "metrics": [
@@ -301,21 +210,16 @@ Response: {
         "unit": "dollars",
         "dimensions": {"service": "ec2", "region": "us-east-1"}
       }
-    ],
-    "warnings": []
+    ]
   }
 }
 ```
 
-## Attribute Source Methods (PDR-9)
+## Attribute Source Methods
 
 **attribute_source.sync**: Fetch entity attributes
 
 ```json
-Request: {
-  "method": "attribute_source.sync",
-  "params": {"since": "2025-11-01T00:00:00Z"}
-}
 Response: {
   "result": {
     "attributes": [
@@ -328,8 +232,7 @@ Response: {
         "valid_from": "2025-11-01T00:00:00Z",
         "valid_until": null
       }
-    ],
-    "warnings": []
+    ]
   }
 }
 ```
@@ -383,7 +286,7 @@ Response: {
 
 **Strategies**: `sequential` (User_1, User_2), `uuid` (random UUIDs), `hash` (SHA-256)
 
-### PDR-9 Capability Declarations
+### Capability Declarations
 
 **Metric Source Plugin**:
 ```json
@@ -408,14 +311,11 @@ Response: {
   "provides_event_types": [
     {
       "type": "pull_request",
-      "description": "GitHub pull request events",
       "normalized_type": "code_review",
       "normalization_map": {
         "title": "title",
         "author": "user.login",
-        "state": "state",
-        "created_at": "created_at",
-        "merged_at": "merged_at"
+        "state": "state"
       }
     }
   ]
@@ -451,58 +351,17 @@ Response: {
 
 ## Common Patterns
 
-### Common Patterns Examples
+**Rate limiting**: Sleep until rate limit reset if remaining < threshold
+**Error handling**: Return partial results + warnings for failed items
+**Config validation**: Check required fields, return sdk.NewConfigError() on failure
 
-```go
-// Rate limiting
-func (p *Plugin) checkRateLimit(resp *github.Response) error {
-    if resp.Rate.Remaining < 100 {
-        time.Sleep(time.Until(resp.Rate.Reset.Time))
-    }
-    return nil
-}
-
-// Error handling + partial results + timeout
-func (p *Plugin) Sync(params sdk.SyncParams) (sdk.SyncResult, error) {
-    ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-    defer cancel()
-
-    events, warnings := []sdk.Event{}, []string{}
-    for _, item := range fetchedItems {
-        if event, err := p.convertToEvent(item); err != nil {
-            warnings = append(warnings, fmt.Sprintf("Skipped %s: %v", item.ID, err))
-        } else {
-            events = append(events, event)
-        }
-    }
-    return sdk.SyncResult{Events: events, Warnings: warnings}, nil
-}
-
-// Configuration validation
-func (p *Plugin) Configure(config map[string]interface{}) error {
-    apiKey, ok := config["api_key"].(string)
-    if !ok || apiKey == "" || !strings.HasPrefix(apiKey, "sk-") {
-        return sdk.NewConfigError("invalid api_key")
-    }
-    p.apiKey = apiKey
-    return nil
-}
-```
+See `plugins/github/` and `plugins/ai-insights/` for complete examples.
 
 ## Configuration and Secrets
 
 ### Secret Field Encryption
 
 Fields with `secret: true` are encrypted at rest:
-
-```json
-{
-  "config_fields": [
-    {"name": "api_key", "secret": true},      // Encrypted
-    {"name": "workspace", "secret": false}     // Plaintext
-  ]
-}
-```
 
 **Flow**:
 1. User enters API key
@@ -513,19 +372,7 @@ Fields with `secret: true` are encrypted at rest:
 
 ### Environment Variables
 
-```go
-func (p *Plugin) Configure(config map[string]interface{}) error {
-    apiKey, ok := config["api_key"].(string)
-    if !ok {
-        apiKey = os.Getenv("MY_PLUGIN_API_KEY")
-    }
-    if apiKey == "" {
-        return sdk.NewConfigError("api_key required")
-    }
-    p.apiKey = apiKey
-    return nil
-}
-```
+Plugins can fallback to env vars if config field is empty. Example: `os.Getenv("MY_PLUGIN_API_KEY")`
 
 ## Anonymization
 
@@ -555,56 +402,21 @@ func (p *Plugin) Configure(config map[string]interface{}) error {
 6. Plugin returns insights with anonymized IDs
 7. Host deanonymizes before display (User_1 → alice@example.com)
 
-### Mapping Storage
-
-Bidirectional mapping in database:
-
-```sql
-CREATE TABLE anonymization_map (
-    anonymized_id TEXT UNIQUE,  -- "User_1"
-    real_name TEXT,              -- "alice@example.com"
-    enabled BOOLEAN DEFAULT 1
-);
-```
-
-### Audit Trail
-
-All anonymization logged:
-
-```sql
-CREATE TABLE audit_log (
-    plugin_name TEXT,
-    action TEXT,
-    event_count INTEGER,
-    anonymized BOOLEAN,  -- Always true for processors
-    timestamp DATETIME
-);
-```
-
 ## Testing & Debugging
 
-### Manual Testing
-
+**Manual Testing**:
 ```bash
 cd plugins/my-plugin && go build -o my-plugin
 echo '{"jsonrpc":"2.0","method":"plugin.info","id":"1"}' | ./my-plugin | jq .
-echo '{"jsonrpc":"2.0","method":"plugin.configure","params":{"api_key":"test"},"id":"2"}' | ./my-plugin
 ```
 
-### Plugin Logs
+**Plugin Logs**: Use `fmt.Fprintf(os.Stderr, ...)` - captured by host
 
-```go
-fmt.Fprintf(os.Stderr, "Syncing events since %s\n", params.Since)  // Captured by host
-```
+**Common Issues**:
+- Plugin timeout → Paginate results, return partial data
+- Invalid JSON-RPC → Use stderr for debug, stdout for JSON-RPC only
 
-### Common Issues
-
-- **Plugin timeout**: Paginate results, return partial data
-- **Configuration not persisted**: SDK handles automatically
-- **Invalid JSON-RPC**: Use stderr for debug, stdout for JSON-RPC only
-- **Secret not decrypted**: Report bug (shouldn't happen)
-
-### PDR-9 Plugin Issues
+### Plugin Issues
 
 **Metric source not syncing**:
 ```bash
@@ -613,79 +425,26 @@ cat plugin.json | jq '.provides_metrics'
 
 # Verify metric_source.sync method is implemented
 echo '{"jsonrpc":"2.0","method":"metric_source.sync","params":{"since":"2025-01-01T00:00:00Z"},"id":"1"}' | ./my-plugin
-
-# Common issue: Wrong plugin type
-# Fix: Ensure "type": "metric_source" in plugin.json
 ```
 
 **Attribute source validation errors**:
-```bash
-# Check if attributes have required fields
-# Must have: entity_type, entity_id, attribute_name, value, value_type, valid_from
-
-# Common issue: Missing valid_from
-# Fix: Always set valid_from to when attribute became valid (use timestamp if current)
-
-# Common issue: valid_until set for current attributes
-# Fix: Set valid_until = null for current attributes, only set when attribute changes
-```
+- Must have: entity_type, entity_id, attribute_name, value, value_type, valid_from
+- Common issue: Missing valid_from or valid_until set for current attributes
 
 **Event normalization not working**:
-```bash
-# Verify provides_event_types is declared
-cat plugin.json | jq '.provides_event_types'
-
-# Check normalization_map is complete
-# Must map all fields used by normalized type
-
-# Common issue: Missing normalized_type field
-# Fix: Add normalized_type to provides_event_types
-```
+- Verify provides_event_types is declared in plugin.json
+- Check normalization_map is complete
 
 **Custom widget not appearing**:
-```bash
-# Check widget declaration
-cat plugin.json | jq '.provides_widgets'
-
-# Verify host registered widget
-curl http://127.0.0.1:3847/api/widgets/registry | jq '.widgets[] | select(.plugin == "my-plugin")'
-
-# Common issue: Frontend component not implemented
-# Custom widgets require React component in frontend
-# Fix: Either use standard widget types or implement custom component
-```
-
-**Metric dimensions not queryable**:
-```bash
-# Ensure dimensions is a JSON object, not array
-# [GOOD] "dimensions": {"service": "ec2", "region": "us-east-1"}
-# [BAD]  "dimensions": ["ec2", "us-east-1"]
-
-# Check dimension keys match provides_metrics
-cat plugin.json | jq '.provides_metrics[].dimensions'
-```
+- Check widget declaration in plugin.json
+- Verify host registered widget
+- Custom widgets require React component in frontend
 
 ## Security
 
-```go
-// Input validation
-func (p *Plugin) Configure(config map[string]interface{}) error {
-    apiKey := config["api_key"].(string)
-    if len(apiKey) < 10 || len(apiKey) > 200 {
-        return sdk.NewConfigError("invalid key length")
-    }
-    if !strings.HasPrefix(baseURL, "https://") {
-        return sdk.NewConfigError("HTTPS required")
-    }
-    return nil
-}
-
-// Credential redaction
-fmt.Fprintf(os.Stderr, "API key: %s\n", apiKey[:4]+"****")  // [GOOD]
-
-// No shell injection
-cmd := exec.Command("git", "clone", userRepo)  // [GOOD] Direct exec
-```
+**Input validation**: Validate lengths, formats, URLs in Configure()
+**Credential redaction**: Only log first 4 chars of secrets
+**No shell injection**: Use exec.Command() with separate args, never sh -c
 
 ## Example Implementations
 
@@ -697,9 +456,8 @@ Reference implementations:
 
 ## References
 
-- Rule 8: Plugin isolation (subprocess, timeout, no DB)
-- Rule 9: Anonymization required for external APIs
-- Rule 19: Encrypt secrets at rest
-- Rule 34: UTC timestamps everywhere
-- Skill: `plugin-development` - Detailed workflows
+- Rule: Plugin isolation (subprocess, timeout, no DB)
+- Rule: Anonymization required for external APIs
+- Rule: Encrypt secrets at rest
+- Rule: UTC timestamps everywhere
 - Agent: `integration-checker` - Plugin system testing

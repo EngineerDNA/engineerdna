@@ -17,21 +17,20 @@ Shared database layer using raw SQL with SQLite.
 ```
 internal/db/
 ├── anonymization.go       # Anonymization mapping store
-├── attributes.go          # Entity attribute store (PDR-9)
+├── attributes.go          # Entity attribute store
 ├── audit.go               # Audit log store
-├── correlations.go        # Correlation store (PDR-9)
+├── correlations.go        # Correlation store
 ├── events.go              # Event store (core)
-├── metrics.go             # Metric value store (PDR-9)
+├── metrics.go             # Metric value store
 ├── migrations.go          # Inline migrations
-├── plugin_manifests.go    # Plugin manifest store (PDR-9)
+├── plugin_manifests.go    # Plugin manifest store
 └── plugins.go             # Plugin config store
 
 migrations/             # Reference SQL files (for VCS)
 ├── 001_initial_schema.sql
 ├── 002_anonymization.sql
-├── 003_audit_log.sql
 ...
-└── 028_multi_modal_data.sql  # PDR-9: Metrics, Attributes, Correlations
+└── 028_multi_modal_data.sql
 ```
 
 ## Critical Rules
@@ -142,26 +141,6 @@ db.QueryRow(`SELECT ..., data FROM events WHERE id = ?`, id).Scan(..., &dataJSON
 json.Unmarshal([]byte(dataJSON), &event.Data)
 ```
 
-## Common Commands
-
-```bash
-# Development
-go vet ./...
-go test ./internal/db/...
-make build
-
-# Inspect
-sqlite3 ~/.engineerdna/engineerdna.db ".tables"
-sqlite3 ~/.engineerdna/engineerdna.db ".schema events"
-sqlite3 ~/.engineerdna/engineerdna.db "SELECT * FROM events LIMIT 5"
-
-# Migrations
-sqlite3 ~/.engineerdna/engineerdna.db "SELECT version FROM schema_migrations ORDER BY applied_at"
-
-# Backup
-cp ~/.engineerdna/engineerdna.db{,.backup}
-```
-
 ## Schema Conventions
 
 ### Table Structure
@@ -181,7 +160,6 @@ CREATE TABLE IF NOT EXISTS events (
 
 CREATE INDEX idx_events_timestamp ON events(timestamp);
 CREATE INDEX idx_events_actor ON events(actor);
-CREATE INDEX idx_events_source ON events(source);
 ```
 
 ### Timestamp Rules
@@ -196,7 +174,7 @@ event.Timestamp = time.Now() // Wrong! Local timezone
 
 **Storage**: TEXT in RFC3339 format (`"2025-11-04T10:30:00Z"`)
 
-### Multi-Modal Data (PDR-9)
+### Multi-Modal Data
 
 EngineerDNA supports three data types:
 
@@ -298,7 +276,7 @@ lsof ~/.engineerdna/engineerdna.db
 pkill engineerdna
 
 # Prevention: Keep transactions short
-data := callExternalAPI()  // I/O outside transaction
+data := callExternalAPI()  # I/O outside transaction
 tx.Begin()
 tx.Exec("INSERT ...", data)
 tx.Commit()
@@ -307,33 +285,14 @@ tx.Commit()
 ### 2. Time Zone Confusion
 
 ```go
-// [BAD]
-event.Timestamp = time.Now()           // Local
-event.CreatedAt = time.Now().UTC()     // UTC
-
 // [GOOD]
 event.Timestamp = time.Now().UTC()
 event.CreatedAt = time.Now().UTC()
 ```
 
-### 3. Migration Ordering
-
-Never skip version numbers:
-```
-001_initial_schema
-002_anonymization
-003_audit_log    # Not 004!
-```
-
-### 4. Deferred Rollback
+### 3. Deferred Rollback
 
 ```go
-// [BAD]
-tx, _ := db.Begin()
-if err := tx.Exec(...); err != nil {
-    return err  // Never rolled back!
-}
-
 // [GOOD]
 tx, _ := db.Begin()
 defer tx.Rollback()  // No-op if committed
@@ -343,7 +302,7 @@ if err := tx.Exec(...); err != nil {
 return tx.Commit()
 ```
 
-### 5. SELECT * Anti-Pattern
+### 4. SELECT * Anti-Pattern
 
 ```go
 // [BAD]
@@ -372,12 +331,9 @@ EOF
 3. **Test**:
 ```bash
 cp ~/.engineerdna/engineerdna.db{,.backup}
-pkill engineerdna
 ./engineerdna
 sqlite3 ~/.engineerdna/engineerdna.db "SELECT version FROM schema_migrations"
 ```
-
-4. **Commit together**: Migration code + reference SQL + Go code
 
 ### Migration Safety
 
@@ -403,56 +359,6 @@ CREATE TABLE events_new (...);
 INSERT INTO events_new SELECT ... FROM events;
 DROP TABLE events;
 ALTER TABLE events_new RENAME TO events;
-```
-
-## Testing
-
-### Table-Driven Tests
-
-```go
-func TestEventStore_Create(t *testing.T) {
-    db, _ := sql.Open("sqlite", ":memory:")
-    defer db.Close()
-
-    RunMigrations(db)
-    store := NewEventStore(db)
-
-    tests := []struct {
-        name    string
-        event   *models.Event
-        wantErr bool
-    }{
-        {"valid", &models.Event{...}, false},
-        {"duplicate", &models.Event{...}, true},
-    }
-
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            err := store.Create(tt.event)
-            if (err != nil) != tt.wantErr {
-                t.Errorf("got error = %v, wantErr %v", err, tt.wantErr)
-            }
-        })
-    }
-}
-```
-
-### Mocking
-
-```go
-type EventStore interface {
-    Create(event *models.Event) error
-    GetByID(id string) (*models.Event, error)
-}
-
-type MockEventStore struct {
-    events []*models.Event
-}
-
-func (m *MockEventStore) Create(e *models.Event) error {
-    m.events = append(m.events, e)
-    return nil
-}
 ```
 
 ## Performance
@@ -519,7 +425,6 @@ db.Query("SELECT * FROM events WHERE actor = ?", actor)
 ### Path Traversal Prevention
 
 ```go
-// [GOOD]
 home, _ := os.UserHomeDir()
 basePath := filepath.Join(home, ".engineerdna")
 fullPath := filepath.Join(basePath, filepath.Clean(userPath))
@@ -565,18 +470,10 @@ GROUP BY source, source_id HAVING COUNT(*) > 1;
 PRAGMA integrity_check;
 ```
 
-## Environment Variables
-
-```bash
-ENGINEERDNA_DB_PATH=/custom/path/engineerdna.db
-ENGINEERDNA_MASTER_KEY=your-32-byte-key
-ENGINEERDNA_DB_TIMEOUT=30s
-```
-
 ## References
 
-- Rule 33: NO one-off scripts, always use migrations
-- Rule 34: UTC timestamps everywhere
+- Rule: NO one-off scripts, always use migrations
+- Rule: UTC timestamps everywhere
 - Hook: `validate_schema_changes.py` enforces migrations
 - Hook: `validate_db_operations.py` blocks direct SQL
 - Skill: `database-migrations` for detailed workflows

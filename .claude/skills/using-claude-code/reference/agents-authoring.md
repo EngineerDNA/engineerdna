@@ -18,13 +18,13 @@
 
 ### Forward Flow
 ```
-engineer → quality → security → advisor
+engineer → quality → data-engineer → advisor
 ```
 
 ### Backward Flow (on errors)
 ```
 quality fails → back to engineer (with failing tests)
-security issues → back to engineer (with specific vulnerabilities)
+data-engineer issues → back to engineer (with specific vulnerabilities)
 advisor blocks → back to engineer (with specific fixes)
 ```
 

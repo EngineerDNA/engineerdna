@@ -65,7 +65,7 @@ Please include the following information in your vulnerability report:
 ### For Users
 
 1. **Keep Updated**: Always run the latest version of EngineerDNA
-2. **Localhost Only**: EngineerDNA v1 is designed for localhost use only (127.0.0.1)
+2. **Localhost Only**: EngineerDNA is designed for localhost use only (127.0.0.1)
 3. **Master Key Security**: Store your master encryption key securely
    - Use OS keychain when possible
    - Never commit `.env` files with master keys
@@ -84,14 +84,14 @@ Please include the following information in your vulnerability report:
 
 1. **No Hardcoded Secrets**: Never commit API keys, tokens, or passwords
 2. **Encryption Required**: All secrets must use AES-256-GCM encryption
-3. **Localhost Binding**: Always bind to 127.0.0.1, never 0.0.0.0 (in v1)
+3. **Localhost Binding**: Always bind to 127.0.0.1, never 0.0.0.0
 4. **SQL Injection Prevention**: Use parameterized queries, never string concatenation
 5. **Dependency Security**: Run `govulncheck` before submitting PRs
 6. **Code Review**: Security-sensitive changes require security team review
 
 ## Security Features in EngineerDNA
 
-### Current Security Measures (v1.x)
+### Current Security Measures
 
 - **Network Isolation**: Localhost-only binding (127.0.0.1:3847)
 - **Encryption at Rest**: AES-256-GCM for all secrets and API keys

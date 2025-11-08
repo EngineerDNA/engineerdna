@@ -100,17 +100,18 @@ Example:
 ls -la ~/.engineerdna/plugins/
 ls -la ./plugins/
 
-# Check for expected plugins
-find ~/.engineerdna/plugins/ -name "plugin.json"
-find ./plugins/ -name "plugin.json"
+# Check for expected plugins using Glob tool:
+# Glob tool → pattern: "**/plugin.json", path: "~/.engineerdna/plugins/"
+# Glob tool → pattern: "**/plugin.json", path: "./plugins/"
 ```
 
 **Plugin Manifest Validation:**
 ```bash
-# For each plugin found, validate plugin.json
-cat plugins/github/plugin.json | jq .
-cat plugins/csv-import/plugin.json | jq .
-cat plugins/ai-insights/plugin.json | jq .
+# For each plugin found, validate plugin.json using Read tool:
+# Read tool → file_path: "plugins/github/plugin.json"
+# Read tool → file_path: "plugins/csv-import/plugin.json"
+# Read tool → file_path: "plugins/ai-insights/plugin.json"
+# Then validate JSON structure
 ```
 
 Check each plugin.json has:
@@ -323,8 +324,8 @@ REASONING: [why this decision]
 ls -la ~/.engineerdna/plugins/
 ls -la ./plugins/
 
-# [CHECK] plugin.json exists
-find . -name "plugin.json"
+# [CHECK] plugin.json exists using Glob tool:
+# Glob tool → pattern: "**/plugin.json"
 
 # [FIX] Verify plugin is in correct location with valid manifest
 ```
@@ -348,9 +349,8 @@ echo '{"jsonrpc":"2.0","method":"plugin.info","id":1}' | ./plugins/github/github
 # [CHECK] Running plugin processes
 ps aux | grep -i plugin
 
-# [CHECK] Context timeout enforcement
-# Verify context.WithTimeout is used
-grep -r "context.WithTimeout" internal/plugin/
+# [CHECK] Context timeout enforcement using Grep tool:
+# Grep tool → pattern: "context\.WithTimeout", path: "internal/plugin/"
 
 # [FIX] Ensure all plugin executions have timeouts
 ```

@@ -66,7 +66,7 @@
 
 When authoring any component, remember these project rules:
 
-- **Rule 33**: NO one-off DB scripts, always use migrations
-- **Rule 34**: UTC timestamps everywhere (use time.Now().UTC() in Go)
-- **Rule 35**: NO aspirational code, delete unused immediately
-- **Rule 21**: One task = one agent invocation, no todo lists to agents
+- **Rule**: NO one-off DB scripts, always use migrations
+- **Rule**: UTC timestamps everywhere (use time.Now().UTC() in Go)
+- **Rule**: NO aspirational code, delete unused immediately
+- **Rule**: One task = one agent invocation, no todo lists to agents

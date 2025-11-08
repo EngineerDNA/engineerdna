@@ -271,7 +271,7 @@ Verify imports and usage after adaptation.
 - Consider performance implications
 - Write self-documenting code
 - Add godoc comments for exported items
-- Delete unused code immediately (Rule 35: NO ASPIRATIONAL CODE)
+- Delete unused code immediately
 
 ## File Naming Conventions
 
