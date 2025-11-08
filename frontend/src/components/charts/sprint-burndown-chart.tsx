@@ -100,7 +100,16 @@ export function SprintBurndownChart({ data }: SprintBurndownChartProps) {
     );
   };
 
-  const completionPercentage = ((data.completed_points / data.total_points) * 100).toFixed(1);
+  const completionPercentage =
+    data.total_points > 0
+      ? ((data.completed_points / data.total_points) * 100).toFixed(1)
+      : '0.0';
+
+  const formatDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return 'N/A';
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+  };
 
   return (
     <div className="space-y-4">
@@ -110,8 +119,7 @@ export function SprintBurndownChart({ data }: SprintBurndownChartProps) {
             {data.sprint_name}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {new Date(data.start_date).toLocaleDateString()} -{' '}
-            {new Date(data.end_date).toLocaleDateString()}
+            {formatDate(data.start_date)} - {formatDate(data.end_date)}
           </p>
         </div>
         <div
