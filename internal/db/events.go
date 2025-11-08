@@ -7,16 +7,28 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/config"
 	"github.com/engineerdna/engineerdna/internal/models"
 	"github.com/google/uuid"
 )
 
+// EventNormalizer is an interface for normalizing events
+type EventNormalizer interface {
+	NormalizeEvent(event *models.Event) error
+}
+
 type EventStore struct {
-	db *sql.DB
+	db         *sql.DB
+	normalizer EventNormalizer
 }
 
 func NewEventStore(db *sql.DB) *EventStore {
 	return &EventStore{db: db}
+}
+
+// SetNormalizer sets the event normalizer for this store
+func (s *EventStore) SetNormalizer(normalizer EventNormalizer) {
+	s.normalizer = normalizer
 }
 
 func (s *EventStore) Create(event *models.Event) error {
@@ -28,15 +40,22 @@ func (s *EventStore) Create(event *models.Event) error {
 	}
 	event.UpdatedAt = time.Now().UTC()
 
+	// Apply normalization if normalizer is set
+	if s.normalizer != nil {
+		if err := s.normalizer.NormalizeEvent(event); err != nil {
+			return fmt.Errorf("failed to normalize event: %w", err)
+		}
+	}
+
 	dataJSON, err := json.Marshal(event.Data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event data: %w", err)
 	}
 
 	_, err = s.db.Exec(`
-		INSERT INTO events (id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, event.ID, event.Type, event.Source, event.SourceID, event.Timestamp, event.Actor, event.EngineerID, string(dataJSON), event.Anonymized, event.CreatedAt, event.UpdatedAt)
+		INSERT INTO events (id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, normalized_type, normalized_data, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, event.ID, event.Type, event.Source, event.SourceID, event.Timestamp, event.Actor, event.EngineerID, string(dataJSON), event.Anonymized, event.NormalizedType, event.NormalizedData, event.CreatedAt, event.UpdatedAt)
 
 	if err != nil {
 		return fmt.Errorf("failed to create event: %w", err)
@@ -51,7 +70,8 @@ func (s *EventStore) CreateBatch(events []*models.Event) error {
 		return nil
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultTimeout)
+	defer cancel()
 	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
 	})
@@ -61,8 +81,8 @@ func (s *EventStore) CreateBatch(events []*models.Event) error {
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO events (id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO events (id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, normalized_type, normalized_data, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
@@ -78,12 +98,19 @@ func (s *EventStore) CreateBatch(events []*models.Event) error {
 		}
 		event.UpdatedAt = time.Now().UTC()
 
+		// Apply normalization if normalizer is set
+		if s.normalizer != nil {
+			if err := s.normalizer.NormalizeEvent(event); err != nil {
+				return fmt.Errorf("failed to normalize event %s: %w", event.ID, err)
+			}
+		}
+
 		dataJSON, err := json.Marshal(event.Data)
 		if err != nil {
 			return fmt.Errorf("failed to marshal event data: %w", err)
 		}
 
-		_, err = stmt.Exec(event.ID, event.Type, event.Source, event.SourceID, event.Timestamp, event.Actor, event.EngineerID, string(dataJSON), event.Anonymized, event.CreatedAt, event.UpdatedAt)
+		_, err = stmt.Exec(event.ID, event.Type, event.Source, event.SourceID, event.Timestamp, event.Actor, event.EngineerID, string(dataJSON), event.Anonymized, event.NormalizedType, event.NormalizedData, event.CreatedAt, event.UpdatedAt)
 		if err != nil {
 			return fmt.Errorf("failed to insert event: %w", err)
 		}
@@ -101,9 +128,9 @@ func (s *EventStore) GetByID(id string) (*models.Event, error) {
 	var dataJSON string
 
 	err := s.db.QueryRow(`
-		SELECT id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, created_at, updated_at
+		SELECT id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, normalized_type, normalized_data, created_at, updated_at
 		FROM events WHERE id = ?
-	`, id).Scan(&event.ID, &event.Type, &event.Source, &event.SourceID, &event.Timestamp, &event.Actor, &event.EngineerID, &dataJSON, &event.Anonymized, &event.CreatedAt, &event.UpdatedAt)
+	`, id).Scan(&event.ID, &event.Type, &event.Source, &event.SourceID, &event.Timestamp, &event.Actor, &event.EngineerID, &dataJSON, &event.Anonymized, &event.NormalizedType, &event.NormalizedData, &event.CreatedAt, &event.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -120,7 +147,7 @@ func (s *EventStore) GetByID(id string) (*models.Event, error) {
 }
 
 func (s *EventStore) List(filters map[string]interface{}, limit, offset int) ([]*models.Event, error) {
-	query := "SELECT id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, created_at, updated_at FROM events WHERE 1=1"
+	query := "SELECT id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, normalized_type, normalized_data, created_at, updated_at FROM events WHERE 1=1"
 	args := []interface{}{}
 
 	if since, ok := filters["since"].(time.Time); ok {
@@ -154,7 +181,7 @@ func (s *EventStore) List(filters map[string]interface{}, limit, offset int) ([]
 		var event models.Event
 		var dataJSON string
 
-		err := rows.Scan(&event.ID, &event.Type, &event.Source, &event.SourceID, &event.Timestamp, &event.Actor, &event.EngineerID, &dataJSON, &event.Anonymized, &event.CreatedAt, &event.UpdatedAt)
+		err := rows.Scan(&event.ID, &event.Type, &event.Source, &event.SourceID, &event.Timestamp, &event.Actor, &event.EngineerID, &dataJSON, &event.Anonymized, &event.NormalizedType, &event.NormalizedData, &event.CreatedAt, &event.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan event: %w", err)
 		}
@@ -208,9 +235,9 @@ func (s *EventStore) Update(event *models.Event) error {
 	}
 
 	_, err = s.db.Exec(`
-		UPDATE events SET type = ?, source = ?, source_id = ?, timestamp = ?, actor = ?, engineer_id = ?, data = ?, anonymized = ?, updated_at = ?
+		UPDATE events SET type = ?, source = ?, source_id = ?, timestamp = ?, actor = ?, engineer_id = ?, data = ?, anonymized = ?, normalized_type = ?, normalized_data = ?, updated_at = ?
 		WHERE id = ?
-	`, event.Type, event.Source, event.SourceID, event.Timestamp, event.Actor, event.EngineerID, string(dataJSON), event.Anonymized, event.UpdatedAt, event.ID)
+	`, event.Type, event.Source, event.SourceID, event.Timestamp, event.Actor, event.EngineerID, string(dataJSON), event.Anonymized, event.NormalizedType, event.NormalizedData, event.UpdatedAt, event.ID)
 
 	if err != nil {
 		return fmt.Errorf("failed to update event: %w", err)
@@ -219,19 +246,27 @@ func (s *EventStore) Update(event *models.Event) error {
 	return nil
 }
 
+func (s *EventStore) Delete(id string) error {
+	_, err := s.db.Exec("DELETE FROM events WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete event: %w", err)
+	}
+	return nil
+}
+
 // GetEventsByEngineerAndTimeRange retrieves events for a specific engineer within a time range
 // limit: max number of events to return (default 1000, max 10000)
 func (s *EventStore) GetEventsByEngineerAndTimeRange(engineerID string, start, end time.Time, limit int) ([]*models.Event, error) {
 	// Apply default and max limits for safety
 	if limit <= 0 {
-		limit = 1000
+		limit = DefaultQueryLimit
 	}
-	if limit > 10000 {
-		limit = 10000
+	if limit > MaxEventQueryLimit {
+		limit = MaxEventQueryLimit
 	}
 
 	rows, err := s.db.Query(`
-		SELECT id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, created_at, updated_at
+		SELECT id, type, source, source_id, timestamp, actor, engineer_id, data, anonymized, normalized_type, normalized_data, created_at, updated_at
 		FROM events
 		WHERE engineer_id = ? AND timestamp >= ? AND timestamp < ?
 		ORDER BY timestamp DESC
@@ -248,7 +283,7 @@ func (s *EventStore) GetEventsByEngineerAndTimeRange(engineerID string, start, e
 		var event models.Event
 		var dataJSON string
 
-		err := rows.Scan(&event.ID, &event.Type, &event.Source, &event.SourceID, &event.Timestamp, &event.Actor, &event.EngineerID, &dataJSON, &event.Anonymized, &event.CreatedAt, &event.UpdatedAt)
+		err := rows.Scan(&event.ID, &event.Type, &event.Source, &event.SourceID, &event.Timestamp, &event.Actor, &event.EngineerID, &dataJSON, &event.Anonymized, &event.NormalizedType, &event.NormalizedData, &event.CreatedAt, &event.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan event: %w", err)
 		}
@@ -265,170 +300,4 @@ func (s *EventStore) GetEventsByEngineerAndTimeRange(engineerID string, start, e
 	}
 
 	return events, nil
-}
-
-// TodayMetrics contains aggregated metrics for today's engineering activity
-type TodayMetrics struct {
-	TotalEvents     int
-	ActiveEngineers int
-	PRsCreated      int
-	PRsMerged       int
-	IssuesClosed    int
-	CommitsToday    int
-	AvgCycleTime    float64
-	AvgReviewTime   float64
-}
-
-// GetTodayMetricsAggregated retrieves aggregated metrics for today using SQL aggregation
-func (s *EventStore) GetTodayMetricsAggregated(startOfDay time.Time) (*TodayMetrics, error) {
-	metrics := &TodayMetrics{}
-
-	// Count total events
-	err := s.db.QueryRow(`
-		SELECT COUNT(*) FROM events WHERE timestamp >= ?
-	`, startOfDay).Scan(&metrics.TotalEvents)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count total events: %w", err)
-	}
-
-	// Count unique engineers
-	err = s.db.QueryRow(`
-		SELECT COUNT(DISTINCT engineer_id) FROM events
-		WHERE timestamp >= ? AND engineer_id != ''
-	`, startOfDay).Scan(&metrics.ActiveEngineers)
-	if err != nil {
-		return nil, fmt.Errorf("failed to count unique engineers: %w", err)
-	}
-
-	// Count PRs created, merged, issues closed, and commits using JSON extraction
-	err = s.db.QueryRow(`
-		SELECT
-			COUNT(CASE WHEN type = 'pull_request' AND (json_extract(data, '$.status') = 'open' OR json_extract(data, '$.status') = 'created') THEN 1 END) as prs_created,
-			COUNT(CASE WHEN type = 'pull_request' AND (json_extract(data, '$.status') = 'merged' OR json_extract(data, '$.status') = 'closed') THEN 1 END) as prs_merged,
-			COUNT(CASE WHEN type = 'issue' AND (json_extract(data, '$.status') = 'closed' OR json_extract(data, '$.status') = 'completed') THEN 1 END) as issues_closed,
-			COUNT(CASE WHEN type = 'commit' THEN 1 END) as commits
-		FROM events WHERE timestamp >= ?
-	`, startOfDay).Scan(&metrics.PRsCreated, &metrics.PRsMerged, &metrics.IssuesClosed, &metrics.CommitsToday)
-	if err != nil {
-		return nil, fmt.Errorf("failed to aggregate event counts: %w", err)
-	}
-
-	// Calculate average cycle time (PR created to merged)
-	// This is more complex and requires loading some data, but with LIMIT
-	// For V1, we'll use a simplified approach
-	filters := map[string]interface{}{
-		"since": startOfDay,
-		"type":  "pull_request",
-	}
-	prEvents, err := s.List(filters, 1000, 0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get PR events for cycle time: %w", err)
-	}
-
-	// Group by PR ID and calculate cycle times
-	prCreatedTimes := make(map[string]time.Time)
-	prMergedTimes := make(map[string]time.Time)
-	for _, event := range prEvents {
-		var prID string
-		if id, ok := event.Data["pr_id"].(string); ok && id != "" {
-			prID = id
-		} else {
-			prID = event.SourceID
-		}
-
-		if status, ok := event.Data["status"].(string); ok {
-			if status == "open" || status == "created" {
-				prCreatedTimes[prID] = event.Timestamp
-			} else if status == "merged" || status == "closed" {
-				prMergedTimes[prID] = event.Timestamp
-			}
-		}
-	}
-
-	var totalCycleTime float64
-	var cycleTimeCount int
-	for prID, createdTime := range prCreatedTimes {
-		if mergedTime, exists := prMergedTimes[prID]; exists {
-			cycleHours := mergedTime.Sub(createdTime).Hours()
-			if cycleHours >= 0 {
-				totalCycleTime += cycleHours
-				cycleTimeCount++
-			}
-		}
-	}
-
-	if cycleTimeCount > 0 {
-		metrics.AvgCycleTime = totalCycleTime / float64(cycleTimeCount)
-		// V1 Implementation: Uses 60% of cycle time as proxy for review time
-		metrics.AvgReviewTime = metrics.AvgCycleTime * 0.6
-	}
-
-	return metrics, nil
-}
-
-// ThroughputDay contains throughput metrics for a single day
-type ThroughputDay struct {
-	Date         string
-	PullRequests int
-	Issues       int
-}
-
-// GetThroughputByDay retrieves daily throughput metrics using SQL aggregation
-func (s *EventStore) GetThroughputByDay(startDate, endDate time.Time) ([]ThroughputDay, error) {
-	rows, err := s.db.Query(`
-		SELECT
-			substr(timestamp, 1, 10) as day,
-			COUNT(CASE WHEN type = 'pull_request' THEN 1 END) as pr_count,
-			COUNT(CASE WHEN type = 'issue' THEN 1 END) as issue_count
-		FROM events
-		WHERE timestamp >= ? AND timestamp < ?
-		GROUP BY substr(timestamp, 1, 10)
-		ORDER BY day ASC
-	`, startDate, endDate)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query throughput by day: %w", err)
-	}
-	defer rows.Close()
-
-	var results []ThroughputDay
-	for rows.Next() {
-		var day ThroughputDay
-		err := rows.Scan(&day.Date, &day.PullRequests, &day.Issues)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan throughput day: %w", err)
-		}
-		results = append(results, day)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating throughput days: %w", err)
-	}
-
-	return results, nil
-}
-
-// CountOpenPRs counts the number of currently open pull requests
-func (s *EventStore) CountOpenPRs() (int, error) {
-	var count int
-	err := s.db.QueryRow(`
-		SELECT COUNT(DISTINCT source_id)
-		FROM events
-		WHERE type = 'pull_request'
-		  AND (
-			json_extract(data, '$.state') = 'open'
-			OR json_extract(data, '$.state') = 'review_requested'
-		  )
-		  AND source_id NOT IN (
-			SELECT source_id FROM events
-			WHERE type = 'pull_request'
-			  AND json_extract(data, '$.state') IN ('merged', 'closed')
-		  )
-		LIMIT 1000
-	`).Scan(&count)
-
-	if err != nil {
-		return 0, fmt.Errorf("failed to count open PRs: %w", err)
-	}
-
-	return count, nil
 }
