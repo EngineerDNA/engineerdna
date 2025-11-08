@@ -21,7 +21,7 @@ type PDFExportPlugin struct {
 func (p *PDFExportPlugin) Info() sdk.PluginInfo {
 	return sdk.PluginInfo{
 		Name:        "pdf-export",
-		Version:     "1.0.0",
+		Version:     "0.1.0",
 		Type:        "destination",
 		Description: "Export metrics to PDF reports",
 		Author:      "EngineerDNA",

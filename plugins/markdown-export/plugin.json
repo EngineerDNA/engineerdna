@@ -1,6 +1,6 @@
 {
   "name": "markdown-export",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "destination",
   "description": "Export metrics to Markdown format",
   "author": "EngineerDNA",

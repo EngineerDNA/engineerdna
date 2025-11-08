@@ -1,6 +1,6 @@
 {
   "name": "csv-import",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "source",
   "description": "Import engineering metrics from CSV files",
   "author": "EngineerDNA",

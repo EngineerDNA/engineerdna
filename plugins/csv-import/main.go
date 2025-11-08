@@ -30,7 +30,7 @@ type CSVImportPlugin struct {
 func (p *CSVImportPlugin) Info() sdk.PluginInfo {
 	return sdk.PluginInfo{
 		Name:        "csv-import",
-		Version:     "1.0.0",
+		Version:     "0.1.0",
 		Type:        "source",
 		Description: "Import engineering metrics from CSV files",
 		Author:      "EngineerDNA",

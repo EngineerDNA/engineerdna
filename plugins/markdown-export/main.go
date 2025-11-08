@@ -20,7 +20,7 @@ type MarkdownExportPlugin struct {
 func (p *MarkdownExportPlugin) Info() sdk.PluginInfo {
 	return sdk.PluginInfo{
 		Name:        "markdown-export",
-		Version:     "1.0.0",
+		Version:     "0.1.0",
 		Type:        "destination",
 		Description: "Export metrics to Markdown format",
 		Author:      "EngineerDNA",

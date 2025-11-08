@@ -85,7 +85,7 @@ func (p *GitHubPlugin) handleGitHubError(err error) error {
 func (p *GitHubPlugin) Info() sdk.PluginInfo {
 	return sdk.PluginInfo{
 		Name:        "github",
-		Version:     "1.0.0",
+		Version:     "0.1.0",
 		Type:        "source",
 		Description: "GitHub Issues and Pull Requests",
 		Author:      "EngineerDNA",

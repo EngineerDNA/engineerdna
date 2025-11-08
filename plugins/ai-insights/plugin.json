@@ -1,6 +1,6 @@
 {
   "name": "ai-insights",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "processor",
   "description": "AI-powered metrics analysis",
   "author": "EngineerDNA",

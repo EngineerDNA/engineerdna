@@ -24,7 +24,7 @@ type GoogleSheetsPlugin struct {
 func (p *GoogleSheetsPlugin) Info() sdk.PluginInfo {
 	return sdk.PluginInfo{
 		Name:        "google-sheets-export",
-		Version:     "1.0.0",
+		Version:     "0.1.0",
 		Type:        "destination",
 		Description: "Export metrics to Google Sheets",
 		Author:      "EngineerDNA",

@@ -52,7 +52,7 @@ type AIInsightsPlugin struct {
 func (p *AIInsightsPlugin) Info() sdk.PluginInfo {
 	return sdk.PluginInfo{
 		Name:        "ai-insights",
-		Version:     "1.0.0",
+		Version:     "0.1.0",
 		Type:        "processor",
 		Description: "AI-powered metrics analysis",
 		Author:      "EngineerDNA",

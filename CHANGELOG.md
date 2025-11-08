@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.0] - 2025-11-08
+## [0.1.0] - 2025-11-08
 
 ### What is EngineerDNA?
 
@@ -285,5 +285,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Actions: 9 (recommendations, actions, outcomes, follow-ups)
 - Dashboards: 13 (dashboards, widgets, metrics, performance)
 
-[Unreleased]: https://github.com/username/engineerdna/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/username/engineerdna/releases/tag/v1.0.0
+[Unreleased]: https://github.com/username/engineerdna/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/username/engineerdna/releases/tag/v0.1.0
