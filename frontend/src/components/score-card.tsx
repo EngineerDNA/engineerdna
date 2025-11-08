@@ -1,15 +1,39 @@
 import { useState } from 'react';
-import type { Engineer, PerformanceScore, Role } from '../api/types';
+import type { Engineer, Role } from '../api/types';
+import type { MetricValue } from '../types/metrics';
 import { ScoreBreakdown } from './score-breakdown';
 
 interface ScoreCardProps {
   engineer: Engineer;
-  score: PerformanceScore | null;
+  metrics: MetricValue[];
   role: Role | null;
 }
 
-export function ScoreCard({ engineer, score, role }: ScoreCardProps) {
+export function ScoreCard({ engineer, metrics, role }: ScoreCardProps) {
   const [expanded, setExpanded] = useState(false);
+
+  // Helper to extract score by metric name
+  const getScore = (metricName: string): number => {
+    const metric = metrics.find((m) => m.metric_name === metricName);
+    return metric?.value ?? 0;
+  };
+
+  const totalScore = getScore('engineer_total_score');
+  const throughputScore = getScore('engineer_throughput_score');
+  const qualityScore = getScore('engineer_quality_score');
+  const speedScore = getScore('engineer_speed_score');
+  const collaborationScore = getScore('engineer_collaboration_score');
+  const impactScore = getScore('engineer_impact_score');
+
+  // Create a score object for the breakdown component
+  const scoreBreakdown = {
+    total_score: totalScore,
+    throughput_score: throughputScore,
+    quality_score: qualityScore,
+    speed_score: speedScore,
+    collaboration_score: collaborationScore,
+    impact_score: impactScore,
+  };
 
   const getScoreColor = (scoreValue: number) => {
     if (scoreValue >= 111) return 'blue';
@@ -25,7 +49,7 @@ export function ScoreCard({ engineer, score, role }: ScoreCardProps) {
     return { label: 'Needs Attention', color: 'red' };
   };
 
-  if (!score) {
+  if (metrics.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
         <div className="flex items-center justify-between">
@@ -45,7 +69,6 @@ export function ScoreCard({ engineer, score, role }: ScoreCardProps) {
     );
   }
 
-  const totalScore = score.total_score;
   const targetScore = role?.target_score || 100;
   const status = getScoreStatus(totalScore, targetScore);
   const scoreColor = getScoreColor(totalScore);
@@ -77,7 +100,7 @@ export function ScoreCard({ engineer, score, role }: ScoreCardProps) {
         </div>
         <div className="text-right">
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {(totalScore ?? 0).toFixed(0)}
+            {totalScore.toFixed(0)}
             <span className="text-lg text-gray-500 dark:text-gray-400">/100</span>
           </div>
           <div className={`text-sm font-medium ${textColorClasses[scoreColor]}`}>
@@ -107,7 +130,7 @@ export function ScoreCard({ engineer, score, role }: ScoreCardProps) {
         {expanded ? 'Hide breakdown' : 'View breakdown'}
       </button>
 
-      {expanded && <ScoreBreakdown score={score} />}
+      {expanded && <ScoreBreakdown score={scoreBreakdown} />}
     </div>
   );
 }

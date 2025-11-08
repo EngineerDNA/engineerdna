@@ -310,14 +310,17 @@ func (s *ForecastingService) PredictQualityDegradation(teamID string) (*models.R
 
 func (s *ForecastingService) getScoreHistory(engineerID string, days int) []float64 {
 	startDate := time.Now().UTC().AddDate(0, 0, -days)
-	scores, err := s.scoringStore.GetPerformanceScores(engineerID, startDate, time.Now().UTC(), 100)
+	metrics, err := s.metricStore.GetEngineerScores(engineerID, startDate, time.Now().UTC(), 100)
 	if err != nil {
 		return []float64{}
 	}
 
-	history := make([]float64, len(scores))
-	for i, score := range scores {
-		history[i] = score.TotalScore
+	// Extract total scores from metrics
+	history := []float64{}
+	for _, m := range metrics {
+		if m.MetricName == "engineer_total_score" {
+			history = append(history, m.Value)
+		}
 	}
 	return history
 }

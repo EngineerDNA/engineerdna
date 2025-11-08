@@ -1,53 +1,46 @@
-import type { PerformanceScore, RawMetrics } from '../api/types';
-
 interface ScoreBreakdownProps {
-  score: PerformanceScore;
+  score: {
+    total_score?: number;
+    throughput_score?: number;
+    quality_score?: number;
+    speed_score?: number;
+    collaboration_score?: number;
+    impact_score?: number;
+  };
 }
 
 export function ScoreBreakdown({ score }: ScoreBreakdownProps) {
-  const rawMetrics: RawMetrics = score.raw_metrics
-    ? JSON.parse(score.raw_metrics)
-    : {
-        throughput_prs_per_week: 0,
-        throughput_story_points: 0,
-        quality_bug_rate: 0,
-        quality_rework_rate: 0,
-        speed_cycle_time_days: 0,
-        speed_time_to_first_review: 0,
-        collaboration_reviews_given: 0,
-        collaboration_review_depth: 0,
-        impact_services_touched: 0,
-      };
-
+  // Score components - raw_metrics removed in PDR-9 schema migration
+  // Description now shows just the score value
   const components = [
     {
       name: 'Throughput',
-      score: score.throughput_score,
-      description: `${(rawMetrics.throughput_prs_per_week ?? 0).toFixed(1)} PRs/week`,
+      score: score.throughput_score ?? 0,
+      description: `Score: ${(score.throughput_score ?? 0).toFixed(0)}`,
       color: 'blue',
     },
     {
       name: 'Quality',
-      score: score.quality_score,
-      description: `${(rawMetrics.quality_bug_rate ?? 0).toFixed(1)}% bug rate`,
+      score: score.quality_score ?? 0,
+      description: `Score: ${(score.quality_score ?? 0).toFixed(0)}`,
       color: 'green',
     },
     {
       name: 'Speed',
-      score: score.speed_score,
-      description: `${(rawMetrics.speed_cycle_time_days ?? 0).toFixed(1)} day cycle time`,
+      score: score.speed_score ?? 0,
+      description: `Score: ${(score.speed_score ?? 0).toFixed(0)}`,
       color: 'purple',
     },
     {
       name: 'Collaboration',
-      score: score.collaboration_score,
-      description: `${(rawMetrics.collaboration_reviews_given ?? 0).toFixed(0)} reviews given`,
+      score: score.collaboration_score ?? 0,
+      description: `Score: ${(score.collaboration_score ?? 0).toFixed(0)}`,
       color: 'orange',
     },
     {
       name: 'Impact',
-      score: score.impact_score,
-      description: `${(rawMetrics.impact_services_touched ?? 0).toFixed(0)} services touched`,
+      score: score.impact_score ?? 0,
+      description: `Score: ${(score.impact_score ?? 0).toFixed(0)}`,
       color: 'pink',
     },
   ];
@@ -71,7 +64,7 @@ export function ScoreBreakdown({ score }: ScoreBreakdownProps) {
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               className={`bg-${component.color}-500 dark:bg-${component.color}-400 h-2 rounded-full transition-all`}
-              style={{ width: `${Math.min(component.score, 100)}%` }}
+              style={{ width: `${Math.min(component.score ?? 0, 100)}%` }}
             />
           </div>
         </div>

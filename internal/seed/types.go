@@ -25,6 +25,7 @@ type SeedData struct {
 	ContextStore     *db.ContextStore
 	ForecastingStore *db.ForecastingStore
 	ActionsStore     *db.ActionsStore
+	AttributeStore   *db.AttributeStore
 	Now              time.Time
 	EngineeringTeam  *models.Team
 	BackendTeam      *models.Team

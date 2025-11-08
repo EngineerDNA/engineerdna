@@ -12,16 +12,19 @@ import (
 func SeedCostROI(data *SeedData) (featureIDs []string, roiCount int) {
 	fmt.Println("\n13. Creating cost/ROI analysis data...")
 
-	// Cost Configuration
-	costConfig := &models.CostConfiguration{
+	// Cost Configuration - use entity_attributes (PDR-9 schema)
+	costAttr := &models.EntityAttribute{
 		EntityType:    "org",
-		MonthlyCost:   12500.0,
-		Currency:      "USD",
-		EffectiveFrom: data.Now.AddDate(-1, 0, 0),
-		Notes:         "Average fully-loaded cost per engineer",
+		EntityID:      "default",
+		AttributeName: "monthly_cost",
+		Value:         "12500.0",
+		ValueType:     "currency",
+		ValidFrom:     data.Now.AddDate(-1, 0, 0),
+		ValidUntil:    nil,
+		Source:        "system_defaults",
 	}
-	if err := data.CostROIStore.CreateCostConfiguration(costConfig); err != nil {
-		log.Printf("Warning: Failed to create cost configuration: %v", err)
+	if err := data.AttributeStore.Create(costAttr); err != nil {
+		log.Printf("Warning: Failed to create cost attribute: %v", err)
 	}
 	fmt.Printf("  Created cost configuration\n")
 

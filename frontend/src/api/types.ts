@@ -221,20 +221,6 @@ export interface RawMetrics {
   impact_services_touched: number;
 }
 
-export interface PerformanceScore {
-  id: string;
-  engineer_id: string;
-  week_start: string;
-  total_score: number;
-  throughput_score: number;
-  quality_score: number;
-  speed_score: number;
-  collaboration_score: number;
-  impact_score: number;
-  raw_metrics: string;
-  created_at: string;
-}
-
 export interface AttentionItem {
   engineer_id: string;
   engineer_name: string;

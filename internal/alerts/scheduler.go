@@ -17,8 +17,8 @@ type Scheduler struct {
 }
 
 // NewScheduler creates a new alert scheduler
-func NewScheduler(database *sql.DB, alertsStore *db.AlertsStore, eventStore *db.EventStore, scoringStore *db.ScoringStore, teamStore *db.TeamStore) *Scheduler {
-	evaluator := NewEvaluator(database, alertsStore, eventStore, scoringStore, teamStore)
+func NewScheduler(database *sql.DB, alertsStore *db.AlertsStore, eventStore *db.EventStore, scoringStore *db.ScoringStore, metricStore *db.MetricStore, teamStore *db.TeamStore) *Scheduler {
+	evaluator := NewEvaluator(database, alertsStore, eventStore, scoringStore, metricStore, teamStore)
 	delivery := NewDelivery(alertsStore)
 
 	return &Scheduler{

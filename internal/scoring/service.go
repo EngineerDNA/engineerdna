@@ -16,14 +16,23 @@ const (
 	MaxComponentScore = 150.0
 )
 
+// MetricStore defines the interface for metric storage
+type MetricStore interface {
+	Create(metric *models.MetricValue) error
+}
+
 // ScoringService handles performance score calculations
 type ScoringService struct {
-	db *sql.DB
+	db          *sql.DB
+	metricStore MetricStore
 }
 
 // NewScoringService creates a new scoring service
-func NewScoringService(db *sql.DB) *ScoringService {
-	return &ScoringService{db: db}
+func NewScoringService(database *sql.DB, metricStore MetricStore) *ScoringService {
+	return &ScoringService{
+		db:          database,
+		metricStore: metricStore,
+	}
 }
 
 // CalculateIndividualScore calculates performance score for an engineer for a given week
@@ -83,7 +92,7 @@ func (s *ScoringService) CalculateIndividualScore(engineerID string, weekStart t
 		}
 	}
 
-	// Create performance score record
+	// Create performance score record (for return value only, not persisted)
 	score := &models.PerformanceScore{
 		ID:                 uuid.New().String(),
 		EngineerID:         engineerID,
@@ -99,10 +108,51 @@ func (s *ScoringService) CalculateIndividualScore(engineerID string, weekStart t
 		CreatedAt:          time.Now().UTC(),
 	}
 
-	// Store in database
-	err = s.storePerformanceScore(score)
-	if err != nil {
-		return nil, fmt.Errorf("failed to store performance score: %w", err)
+	// Store metrics in metric_values table (PDR-9 universal schema)
+	now := time.Now().UTC()
+	dimensions := map[string]interface{}{"engineer_id": engineerID}
+
+	// Store total score
+	if err := s.metricStore.Create(&models.MetricValue{
+		ID:          uuid.New().String(),
+		MetricName:  "engineer_total_score",
+		Source:      "scoring_system",
+		Timestamp:   weekStart,
+		Granularity: "weekly",
+		Value:       totalScore,
+		Unit:        "score",
+		Dimensions:  dimensions,
+		CreatedAt:   now,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to store total score: %w", err)
+	}
+
+	// Store component scores
+	componentMetrics := []struct {
+		name  string
+		value float64
+	}{
+		{"engineer_throughput_score", componentScores.Throughput},
+		{"engineer_quality_score", componentScores.Quality},
+		{"engineer_speed_score", componentScores.Speed},
+		{"engineer_collaboration_score", componentScores.Collaboration},
+		{"engineer_impact_score", componentScores.Impact},
+	}
+
+	for _, metric := range componentMetrics {
+		if err := s.metricStore.Create(&models.MetricValue{
+			ID:          uuid.New().String(),
+			MetricName:  metric.name,
+			Source:      "scoring_system",
+			Timestamp:   weekStart,
+			Granularity: "weekly",
+			Value:       metric.value,
+			Unit:        "score",
+			Dimensions:  dimensions,
+			CreatedAt:   now,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to store %s: %w", metric.name, err)
+		}
 	}
 
 	return score, nil
@@ -494,25 +544,6 @@ func (s *ScoringService) normalizeScore(componentScores *models.ComponentScores,
 	normalizedScore = math.Round(normalizedScore*100) / 100
 
 	return normalizedScore
-}
-
-// storePerformanceScore stores a performance score in the database
-func (s *ScoringService) storePerformanceScore(score *models.PerformanceScore) error {
-	_, err := s.db.Exec(`
-		INSERT OR REPLACE INTO performance_scores (
-			id, engineer_id, week_start, total_score,
-			throughput_score, quality_score, speed_score, collaboration_score, impact_score,
-			raw_metrics, burnout_risk, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, score.ID, score.EngineerID, score.WeekStart, score.TotalScore,
-		score.ThroughputScore, score.QualityScore, score.SpeedScore, score.CollaborationScore, score.ImpactScore,
-		score.RawMetrics, score.BurnoutRisk, score.CreatedAt)
-
-	if err != nil {
-		return fmt.Errorf("failed to insert performance score: %w", err)
-	}
-
-	return nil
 }
 
 // DetectBurnoutRisks analyzes work patterns to detect burnout indicators

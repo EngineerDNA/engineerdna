@@ -101,9 +101,7 @@ export function SprintBurndownChart({ data }: SprintBurndownChartProps) {
   };
 
   const completionPercentage =
-    data.total_points > 0
-      ? ((data.completed_points / data.total_points) * 100).toFixed(1)
-      : '0.0';
+    data.total_points > 0 ? ((data.completed_points / data.total_points) * 100).toFixed(1) : '0.0';
 
   const formatDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return 'N/A';

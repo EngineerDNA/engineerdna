@@ -2,7 +2,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { ScoreCard } from '../components/score-card';
-import type { PerformanceScore, Role } from '../api/types';
+import type { Role } from '../api/types';
+import type { MetricValue } from '../types/metrics';
 import { useMemo } from 'react';
 
 export function TeamDetailPage() {
@@ -56,9 +57,9 @@ export function TeamDetailPage() {
       const scorePromises = members.map(async (member) => {
         try {
           const result = await api.getPerformanceScores(member.id);
-          return { memberId: member.id, scores: result.scores || [] };
+          return { memberId: member.id, metrics: result.metrics || [] };
         } catch {
-          return { memberId: member.id, scores: [] };
+          return { memberId: member.id, metrics: [] };
         }
       });
       return Promise.all(scorePromises);
@@ -67,11 +68,11 @@ export function TeamDetailPage() {
     staleTime: 30000,
   });
 
-  const memberScoresMap = useMemo(() => {
-    if (!memberScoresQueries.data) return new Map<string, PerformanceScore | null>();
-    const map = new Map<string, PerformanceScore | null>();
-    memberScoresQueries.data.forEach(({ memberId, scores }) => {
-      map.set(memberId, scores.length > 0 ? scores[0] : null);
+  const memberMetricsMap = useMemo(() => {
+    if (!memberScoresQueries.data) return new Map<string, MetricValue[]>();
+    const map = new Map<string, MetricValue[]>();
+    memberScoresQueries.data.forEach(({ memberId, metrics }) => {
+      map.set(memberId, metrics);
     });
     return map;
   }, [memberScoresQueries.data]);
@@ -86,13 +87,13 @@ export function TeamDetailPage() {
 
   const sortedMembers = useMemo(() => {
     return [...members].sort((a, b) => {
-      const scoreA = memberScoresMap.get(a.id);
-      const scoreB = memberScoresMap.get(b.id);
-      const totalA = scoreA?.total_score || 0;
-      const totalB = scoreB?.total_score || 0;
+      const metricsA = memberMetricsMap.get(a.id) || [];
+      const metricsB = memberMetricsMap.get(b.id) || [];
+      const totalA = metricsA.find((m) => m.metric_name === 'engineer_total_score')?.value || 0;
+      const totalB = metricsB.find((m) => m.metric_name === 'engineer_total_score')?.value || 0;
       return totalB - totalA;
     });
-  }, [members, memberScoresMap]);
+  }, [members, memberMetricsMap]);
 
   const getChangeIcon = (change: number) => {
     if (change > 0) return '↑';
@@ -235,9 +236,9 @@ export function TeamDetailPage() {
         ) : (
           <div className="grid grid-cols-1 gap-6">
             {sortedMembers.map((member) => {
-              const score = memberScoresMap.get(member.id) || null;
+              const metrics = memberMetricsMap.get(member.id) || [];
               const role = member.role_id ? rolesMap.get(member.role_id) || null : null;
-              return <ScoreCard key={member.id} engineer={member} score={score} role={role} />;
+              return <ScoreCard key={member.id} engineer={member} metrics={metrics} role={role} />;
             })}
           </div>
         )}

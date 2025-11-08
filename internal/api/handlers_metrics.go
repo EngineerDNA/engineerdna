@@ -299,7 +299,7 @@ func (s *Server) handleMetricCalculate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Definition json.RawMessage    `json:"definition"`
+		Definition json.RawMessage        `json:"definition"`
 		Params     map[string]interface{} `json:"params"`
 	}
 

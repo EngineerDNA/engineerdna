@@ -10,14 +10,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// MetricStore defines the interface for metric storage
+type MetricStore interface {
+	Create(metric *models.MetricValue) error
+	GetEngineerScores(engineerID string, startDate, endDate time.Time, limit int) ([]*models.MetricValue, error)
+}
+
 // Service handles team management and aggregation
 type Service struct {
-	db *sql.DB
+	db          *sql.DB
+	metricStore MetricStore
 }
 
 // NewService creates a new team service
-func NewService(db *sql.DB) *Service {
-	return &Service{db: db}
+func NewService(database *sql.DB, metricStore MetricStore) *Service {
+	return &Service{
+		db:          database,
+		metricStore: metricStore,
+	}
 }
 
 // CalculateTeamScore calculates the aggregated performance score for a team
@@ -209,47 +219,98 @@ func (s *Service) getActiveMembers(teamID string) ([]*models.TeamMembership, err
 	return members, nil
 }
 
-// getIndividualScore retrieves an individual's performance score for a given week
+// getIndividualScore retrieves an individual's performance score for a given week from metric_values
 func (s *Service) getIndividualScore(engineerID string, weekStart time.Time) (*models.PerformanceScore, error) {
-	var score models.PerformanceScore
+	// Query metric_values for the week range
+	weekEnd := weekStart.AddDate(0, 0, 7)
+	metrics, err := s.metricStore.GetEngineerScores(engineerID, weekStart, weekEnd, 10)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get engineer scores: %w", err)
+	}
 
-	err := s.db.QueryRow(`
-		SELECT id, engineer_id, week_start, total_score,
-		       throughput_score, quality_score, speed_score, collaboration_score, impact_score,
-		       raw_metrics, created_at
-		FROM performance_scores
-		WHERE engineer_id = ?
-		  AND week_start = ?
-	`, engineerID, weekStart).Scan(
-		&score.ID, &score.EngineerID, &score.WeekStart, &score.TotalScore,
-		&score.ThroughputScore, &score.QualityScore, &score.SpeedScore, &score.CollaborationScore, &score.ImpactScore,
-		&score.RawMetrics, &score.CreatedAt,
-	)
+	if len(metrics) == 0 {
+		return nil, nil // No scores for this engineer this week
+	}
 
-	if err == sql.ErrNoRows {
+	// Extract scores by metric name
+	score := &models.PerformanceScore{
+		ID:         uuid.New().String(),
+		EngineerID: engineerID,
+		WeekStart:  weekStart,
+		CreatedAt:  time.Now().UTC(),
+	}
+
+	for _, metric := range metrics {
+		switch metric.MetricName {
+		case "engineer_total_score":
+			score.TotalScore = metric.Value
+		case "engineer_throughput_score":
+			score.ThroughputScore = metric.Value
+		case "engineer_quality_score":
+			score.QualityScore = metric.Value
+		case "engineer_speed_score":
+			score.SpeedScore = metric.Value
+		case "engineer_collaboration_score":
+			score.CollaborationScore = metric.Value
+		case "engineer_impact_score":
+			score.ImpactScore = metric.Value
+		}
+	}
+
+	// Return nil if no total score found (incomplete data)
+	if score.TotalScore == 0 {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to query performance score: %w", err)
-	}
 
-	return &score, nil
+	return score, nil
 }
 
-// storeTeamScore stores a team performance score in the database
+// storeTeamScore stores team performance scores in metric_values table
 func (s *Service) storeTeamScore(score *models.TeamPerformanceScore) error {
-	_, err := s.db.Exec(`
-		INSERT OR REPLACE INTO team_performance_scores (
-			id, team_id, week_start, total_score, member_count,
-			throughput_score, quality_score, speed_score, collaboration_score, impact_score,
-			created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, score.ID, score.TeamID, score.WeekStart, score.TotalScore, score.MemberCount,
-		score.ThroughputScore, score.QualityScore, score.SpeedScore, score.CollaborationScore, score.ImpactScore,
-		score.CreatedAt)
+	now := time.Now().UTC()
+	dimensions := map[string]interface{}{"team_id": score.TeamID}
 
-	if err != nil {
-		return fmt.Errorf("failed to insert team performance score: %w", err)
+	// Store total score
+	if err := s.metricStore.Create(&models.MetricValue{
+		ID:          uuid.New().String(),
+		MetricName:  "team_total_score",
+		Source:      "scoring_system",
+		Timestamp:   score.WeekStart,
+		Granularity: "weekly",
+		Value:       score.TotalScore,
+		Unit:        "score",
+		Dimensions:  dimensions,
+		CreatedAt:   now,
+	}); err != nil {
+		return fmt.Errorf("failed to store team total score: %w", err)
+	}
+
+	// Store component scores
+	componentMetrics := []struct {
+		name  string
+		value float64
+	}{
+		{"team_throughput_score", score.ThroughputScore},
+		{"team_quality_score", score.QualityScore},
+		{"team_speed_score", score.SpeedScore},
+		{"team_collaboration_score", score.CollaborationScore},
+		{"team_impact_score", score.ImpactScore},
+	}
+
+	for _, metric := range componentMetrics {
+		if err := s.metricStore.Create(&models.MetricValue{
+			ID:          uuid.New().String(),
+			MetricName:  metric.name,
+			Source:      "scoring_system",
+			Timestamp:   score.WeekStart,
+			Granularity: "weekly",
+			Value:       metric.value,
+			Unit:        "score",
+			Dimensions:  dimensions,
+			CreatedAt:   now,
+		}); err != nil {
+			return fmt.Errorf("failed to store %s: %w", metric.name, err)
+		}
 	}
 
 	return nil

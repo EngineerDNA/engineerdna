@@ -9,7 +9,7 @@ import (
 )
 
 // CreateDefaultCostConfiguration sets up industry standard costs
-func CreateDefaultCostConfiguration(store *db.CostROIStore) error {
+func CreateDefaultCostConfiguration(attributeStore *db.AttributeStore) error {
 	defaultCosts := map[string]float64{
 		"junior":    15000.0, // $15k/month
 		"mid":       20000.0, // $20k/month
@@ -21,7 +21,12 @@ func CreateDefaultCostConfiguration(store *db.CostROIStore) error {
 	now := time.Now().UTC()
 
 	// Check if defaults already exist
-	existing, _, err := store.ListCostConfigurations("org", 0, 0)
+	filters := map[string]interface{}{
+		"entity_type":    "role",
+		"attribute_name": "monthly_cost",
+		"as_of":          now,
+	}
+	existing, err := attributeStore.List(filters, 10, 0)
 	if err != nil {
 		return fmt.Errorf("failed to check existing configurations: %w", err)
 	}
@@ -31,20 +36,20 @@ func CreateDefaultCostConfiguration(store *db.CostROIStore) error {
 		return nil
 	}
 
-	// Create default configs for each role
+	// Create default cost attributes for each role
 	for role, cost := range defaultCosts {
-		config := &models.CostConfiguration{
-			EntityType:    "org",
-			EntityID:      nil, // org-wide default
-			Role:          &role,
-			MonthlyCost:   cost,
-			Currency:      "USD",
-			EffectiveFrom: now,
-			EffectiveTo:   nil, // current
-			Notes:         "Industry standard fully-loaded cost (salary + benefits + overhead)",
+		attr := &models.EntityAttribute{
+			EntityType:    "role",
+			EntityID:      role,
+			AttributeName: "monthly_cost",
+			Value:         fmt.Sprintf("%.2f", cost),
+			ValueType:     "currency",
+			ValidFrom:     now,
+			ValidUntil:    nil, // current
+			Source:        "system_defaults",
 		}
 
-		if err := store.CreateCostConfiguration(config); err != nil {
+		if err := attributeStore.Create(attr); err != nil {
 			return fmt.Errorf("failed to create default cost for role %s: %w", role, err)
 		}
 	}

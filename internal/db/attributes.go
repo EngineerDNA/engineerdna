@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -160,4 +161,168 @@ func (s *AttributeStore) GetCurrentAttributes(entityType, entityID string) ([]*m
 	}
 
 	return attributes, nil
+}
+
+// GetEntityAttributes retrieves attributes for an entity by name
+// Supports optional attribute name filtering
+func (s *AttributeStore) GetEntityAttributes(entityType, entityID, attributeName string) ([]*models.EntityAttribute, error) {
+	query := `
+		SELECT id, entity_type, entity_id, attribute_name, value, value_type, valid_from, valid_until, source, created_at
+		FROM entity_attributes
+		WHERE entity_type = ? AND entity_id = ?
+	`
+	args := []interface{}{entityType, entityID}
+
+	if attributeName != "" {
+		query += " AND attribute_name = ?"
+		args = append(args, attributeName)
+	}
+
+	query += " ORDER BY attribute_name, valid_from DESC"
+
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query entity attributes: %w", err)
+	}
+	defer rows.Close()
+
+	var attributes []*models.EntityAttribute
+	for rows.Next() {
+		var attr models.EntityAttribute
+		var validUntil sql.NullTime
+
+		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan attribute: %w", err)
+		}
+
+		if validUntil.Valid {
+			attr.ValidUntil = &validUntil.Time
+		}
+
+		attributes = append(attributes, &attr)
+	}
+
+	return attributes, rows.Err()
+}
+
+// GetEngineerCost retrieves current cost configuration for an engineer
+// Replaces GetCurrentCostForEntity from cost_roi.go for engineers
+func (s *AttributeStore) GetEngineerCost(engineerID string) (*models.EntityAttribute, error) {
+	var attr models.EntityAttribute
+	var validUntil sql.NullTime
+
+	now := time.Now().UTC()
+	err := s.db.QueryRow(`
+		SELECT id, entity_type, entity_id, attribute_name, value, value_type, valid_from, valid_until, source, created_at
+		FROM entity_attributes
+		WHERE entity_type = 'engineer'
+		  AND entity_id = ?
+		  AND attribute_name = 'monthly_cost'
+		  AND valid_from <= ?
+		  AND (valid_until IS NULL OR valid_until > ?)
+		ORDER BY valid_from DESC
+		LIMIT 1
+	`, engineerID, now, now).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get engineer cost: %w", err)
+	}
+
+	if validUntil.Valid {
+		attr.ValidUntil = &validUntil.Time
+	}
+
+	return &attr, nil
+}
+
+// GetTeamCosts retrieves current cost configurations for all team members
+func (s *AttributeStore) GetTeamCosts(teamID string) ([]*models.EntityAttribute, error) {
+	// First get all engineers in the team
+	// This would typically join with a team_members table or engineers table
+	// For now, we'll query attributes directly
+
+	now := time.Now().UTC()
+	rows, err := s.db.Query(`
+		SELECT id, entity_type, entity_id, attribute_name, value, value_type, valid_from, valid_until, source, created_at
+		FROM entity_attributes
+		WHERE entity_type IN ('engineer', 'team')
+		  AND attribute_name = 'monthly_cost'
+		  AND valid_from <= ?
+		  AND (valid_until IS NULL OR valid_until > ?)
+		ORDER BY entity_type, entity_id, valid_from DESC
+	`, now, now)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to query team costs: %w", err)
+	}
+	defer rows.Close()
+
+	var attributes []*models.EntityAttribute
+	seen := make(map[string]bool) // Track entity_id to get only most recent
+
+	for rows.Next() {
+		var attr models.EntityAttribute
+		var validUntil sql.NullTime
+
+		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan attribute: %w", err)
+		}
+
+		if validUntil.Valid {
+			attr.ValidUntil = &validUntil.Time
+		}
+
+		// Only include the first (most recent) cost for each entity
+		key := attr.EntityType + ":" + attr.EntityID
+		if !seen[key] {
+			seen[key] = true
+			attributes = append(attributes, &attr)
+		}
+	}
+
+	return attributes, rows.Err()
+}
+
+// GetCurrentAttributeValue retrieves the current value of a specific attribute
+// Returns the value as a map if it's JSON, otherwise as a string
+func (s *AttributeStore) GetCurrentAttributeValue(entityType, entityID, attributeName string) (interface{}, error) {
+	var attr models.EntityAttribute
+	var validUntil sql.NullTime
+
+	now := time.Now().UTC()
+	err := s.db.QueryRow(`
+		SELECT id, entity_type, entity_id, attribute_name, value, value_type, valid_from, valid_until, source, created_at
+		FROM entity_attributes
+		WHERE entity_type = ?
+		  AND entity_id = ?
+		  AND attribute_name = ?
+		  AND valid_from <= ?
+		  AND (valid_until IS NULL OR valid_until > ?)
+		ORDER BY valid_from DESC
+		LIMIT 1
+	`, entityType, entityID, attributeName, now, now).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get attribute value: %w", err)
+	}
+
+	// Parse value based on type
+	switch attr.ValueType {
+	case "json":
+		var result map[string]interface{}
+		if err := json.Unmarshal([]byte(attr.Value), &result); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JSON value: %w", err)
+		}
+		return result, nil
+	default:
+		return attr.Value, nil
+	}
 }

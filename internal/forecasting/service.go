@@ -17,16 +17,18 @@ type ForecastingService struct {
 	forecastingStore *db.ForecastingStore
 	planningStore    *db.PlanningStore
 	scoringStore     *db.ScoringStore
+	metricStore      *db.MetricStore
 	goalsStore       *db.GoalsStore
 }
 
 // NewForecastingService creates a new forecasting service
-func NewForecastingService(database *sql.DB, forecastingStore *db.ForecastingStore, planningStore *db.PlanningStore, scoringStore *db.ScoringStore, goalsStore *db.GoalsStore) *ForecastingService {
+func NewForecastingService(database *sql.DB, forecastingStore *db.ForecastingStore, planningStore *db.PlanningStore, scoringStore *db.ScoringStore, metricStore *db.MetricStore, goalsStore *db.GoalsStore) *ForecastingService {
 	return &ForecastingService{
 		db:               database,
 		forecastingStore: forecastingStore,
 		planningStore:    planningStore,
 		scoringStore:     scoringStore,
+		metricStore:      metricStore,
 		goalsStore:       goalsStore,
 	}
 }

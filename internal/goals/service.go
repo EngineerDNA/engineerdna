@@ -12,13 +12,15 @@ import (
 type Service struct {
 	store        *db.GoalsStore
 	scoringStore *db.ScoringStore
+	metricStore  *db.MetricStore
 }
 
 // NewService creates a new goal service
-func NewService(store *db.GoalsStore, scoringStore *db.ScoringStore) *Service {
+func NewService(store *db.GoalsStore, scoringStore *db.ScoringStore, metricStore *db.MetricStore) *Service {
 	return &Service{
 		store:        store,
 		scoringStore: scoringStore,
+		metricStore:  metricStore,
 	}
 }
 
@@ -171,36 +173,24 @@ func (s *Service) fetchMetricValue(metricName, ownerID, ownerType string) (float
 	endDate := now
 	startDate := now.AddDate(0, 0, -28) // 4 weeks ago
 
-	scores, err := s.scoringStore.GetPerformanceScores(ownerID, startDate, endDate, 100)
-	if err != nil || len(scores) == 0 {
+	metrics, err := s.metricStore.GetEngineerScores(ownerID, startDate, endDate, 100)
+	if err != nil || len(metrics) == 0 {
 		return 0, fmt.Errorf("no scoring data available")
 	}
 
-	// Get most recent score
-	score := scores[0]
-
-	// Parse RawMetrics from JSON
-	// Note: This is a simplified version. In a real implementation,
-	// we'd need to unmarshal the RawMetrics JSON string.
-	// For now, we'll return the total score for most metrics
-
-	switch metricName {
-	case "total_score":
-		return score.TotalScore, nil
-	case "throughput_score":
-		return score.ThroughputScore, nil
-	case "quality_score":
-		return score.QualityScore, nil
-	case "speed_score":
-		return score.SpeedScore, nil
-	case "collaboration_score":
-		return score.CollaborationScore, nil
-	case "impact_score":
-		return score.ImpactScore, nil
-	default:
-		// For other metrics, return total score as fallback
-		return score.TotalScore, nil
+	// Extract total score from most recent metric
+	totalScore := float64(0)
+	for _, m := range metrics {
+		if m.MetricName == "engineer_total_score" {
+			totalScore = m.Value
+			break
+		}
 	}
+
+	// For now, return total score as percentage (simplified)
+	// TODO: Implement proper metric parsing and calculation from dimensions
+	// For most metric names, we'll return the total score
+	return totalScore, nil
 }
 
 // CompleteMilestone marks a milestone as complete

@@ -38,17 +38,17 @@ func NewCorrelationEngine(
 
 // CorrelationDefinition describes how to calculate a correlation
 type CorrelationDefinition struct {
-	Name        string                        `json:"name"`
-	Description string                        `json:"description,omitempty"`
-	Inputs      map[string]CorrelationInput   `json:"inputs"`
-	Formula     string                        `json:"formula"`
-	TimeWindow  string                        `json:"time_window,omitempty"` // day, week, month, quarter
-	Metadata    map[string]interface{}        `json:"metadata,omitempty"`
+	Name        string                      `json:"name"`
+	Description string                      `json:"description,omitempty"`
+	Inputs      map[string]CorrelationInput `json:"inputs"`
+	Formula     string                      `json:"formula"`
+	TimeWindow  string                      `json:"time_window,omitempty"` // day, week, month, quarter
+	Metadata    map[string]interface{}      `json:"metadata,omitempty"`
 }
 
 // CorrelationInput defines a single input to a correlation
 type CorrelationInput struct {
-	Source    string                 `json:"source"`     // "metric", "events", "attribute"
+	Source    string                 `json:"source"` // "metric", "events", "attribute"
 	Metric    string                 `json:"metric,omitempty"`
 	EventType string                 `json:"event_type,omitempty"`
 	Attribute string                 `json:"attribute,omitempty"`
@@ -142,7 +142,7 @@ func (e *CorrelationEngine) extractTimeRange(params map[string]interface{}, time
 		end = start.AddDate(0, 1, 0)
 	case "quarter":
 		month := int(now.Month())
-		quarterStart := ((month - 1) / 3) * 3 + 1
+		quarterStart := ((month-1)/3)*3 + 1
 		start = time.Date(now.Year(), time.Month(quarterStart), 1, 0, 0, 0, 0, time.UTC)
 		end = start.AddDate(0, 3, 0)
 	default:

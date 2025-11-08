@@ -89,7 +89,7 @@ func TestCalculateTeamScore_EmptyTeam(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	service := NewService(db)
+	service := NewService(db, nil) // metricStore not used in this test
 
 	// Create a team with no members
 	_, err := db.Exec(`INSERT INTO teams (id, name) VALUES ('team1', 'Empty Team')`)
@@ -113,7 +113,7 @@ func TestCalculateTeamScore_WithMembers(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	service := NewService(db)
+	service := NewService(db, nil) // metricStore not used in this test
 
 	// Create team
 	_, err := db.Exec(`INSERT INTO teams (id, name) VALUES ('team1', 'Backend Team')`)
@@ -185,7 +185,7 @@ func TestGetTeamHierarchy(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	service := NewService(db)
+	service := NewService(db, nil) // metricStore not used in this test
 
 	// Create team hierarchy: Engineering > Backend > API
 	_, err := db.Exec(`
@@ -242,7 +242,7 @@ func TestGetTeamHierarchy_CircularReference(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	service := NewService(db)
+	service := NewService(db, nil) // metricStore not used in this test
 
 	// Create circular reference: team1 -> team2 -> team1 (via direct updates to bypass FK)
 	_, err := db.Exec(`
@@ -265,7 +265,7 @@ func TestGetOrgWideScores(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	service := NewService(db)
+	service := NewService(db, nil) // metricStore not used in this test
 
 	// Create top-level teams
 	_, err := db.Exec(`

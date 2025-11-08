@@ -22,20 +22,8 @@ type TeamMembership struct {
 	LeftAt   *time.Time `json:"left_at,omitempty"`
 }
 
-// ViewConfiguration represents saved dashboard views
-type ViewConfiguration struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Role        string    `json:"role,omitempty"`
-	DefaultMode string    `json:"default_mode,omitempty"`
-	TeamFilter  string    `json:"team_filter,omitempty"`
-	AlertFilter string    `json:"alert_filter,omitempty"`
-	SortOrder   string    `json:"sort_order,omitempty"`
-	IsDefault   bool      `json:"is_default"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
 // TeamPerformanceScore represents aggregated performance scores for a team
+// NOTE: This is a computed view, not persisted. Data stored in metric_values table.
 type TeamPerformanceScore struct {
 	ID                 string    `json:"id"`
 	TeamID             string    `json:"team_id"`

@@ -18,7 +18,7 @@ type WidgetRegistry struct {
 
 // WidgetRegistration represents a registered widget
 type WidgetRegistration struct {
-	ID               string               `json:"id"`                 // Unique ID: plugin_name:widget_name
+	ID               string               `json:"id"` // Unique ID: plugin_name:widget_name
 	PluginName       string               `json:"plugin_name"`
 	Name             string               `json:"name"`
 	Type             string               `json:"type"` // "number", "chart", "table", "custom"

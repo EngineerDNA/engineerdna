@@ -2,21 +2,6 @@ package models
 
 import "time"
 
-// CostConfiguration defines engineering costs by entity and role
-type CostConfiguration struct {
-	ID            string     `json:"id"`
-	EntityType    string     `json:"entity_type"`         // 'engineer', 'team', 'org'
-	EntityID      *string    `json:"entity_id,omitempty"` // engineer_id, team_id, or null
-	Role          *string    `json:"role,omitempty"`      // 'junior', 'mid', 'senior', 'staff', 'principal'
-	MonthlyCost   float64    `json:"monthly_cost"`        // fully-loaded cost
-	Currency      string     `json:"currency"`
-	EffectiveFrom time.Time  `json:"effective_from"`
-	EffectiveTo   *time.Time `json:"effective_to,omitempty"` // null = current
-	Notes         string     `json:"notes,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-}
-
 // FeatureValue represents business value of a feature
 type FeatureValue struct {
 	ID                 string    `json:"id"`
@@ -84,18 +69,6 @@ type EngineeringInvestment struct {
 	FeatureCount int       `json:"feature_count"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
-}
-
-// CostEfficiencyMetric represents derived efficiency metrics
-type CostEfficiencyMetric struct {
-	ID          string    `json:"id"`
-	TimePeriod  string    `json:"time_period"`
-	EntityType  string    `json:"entity_type"` // 'team', 'org'
-	EntityID    *string   `json:"entity_id,omitempty"`
-	MetricName  string    `json:"metric_name"` // 'cost_per_pr', 'cost_per_point'
-	MetricValue float64   `json:"metric_value"`
-	Currency    string    `json:"currency"`
-	ComputedAt  time.Time `json:"computed_at"`
 }
 
 // ROISummary provides computed ROI view (not stored, computed)

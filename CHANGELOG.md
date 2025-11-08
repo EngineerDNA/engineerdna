@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### What is EngineerDNA?
 
-**EngineerDNA v1 is an AI Chief of Staff for engineering leaders** - a local desktop application that transforms engineering data into actionable insights.
+**EngineerDNA is an AI Chief of Staff for engineering leaders** - a local desktop application that transforms engineering data into actionable insights.
 
 **Core Value:**
 - **For Engineering Managers**: "Who needs my attention this week and what should I talk to them about?"
@@ -39,6 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tailwind CSS for styling
 - Single binary distribution with embedded frontend
 
+*Data Model*:
+- Universal multi-modal schema supporting three data types: Events, Metrics, Attributes
+- metric_values table for time-series measurements with granularity and dimensions
+- entity_attributes table for entity facts with temporal validity tracking
+- correlations system for cross-data-type relationships
+- Normalized event types for multi-source support (GitHub PR + GitLab MR → code_review)
+
 *Security & Privacy*:
 - Localhost-only binding (127.0.0.1:3847)
 - AES-256-GCM encryption for API keys and secrets
@@ -50,11 +57,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Plugin System**
 
 *Architecture*:
-- Three plugin types: Source (data IN), Destination (data OUT), Processor (transforms)
+- Five plugin types: Source (events IN), Metric Source (metrics IN), Attribute Source (attributes IN), Destination (data OUT), Processor (transforms)
 - JSON-RPC communication over stdin/stdout
 - Subprocess isolation with configurable timeouts
 - Plugin discovery from ~/.engineerdna/plugins/ and ./plugins/
 - Plugin SDK for Go developers
+- Plugin manifest registration for capabilities (metrics, events, widgets, correlations)
 - Automatic anonymization for processor plugins sending to external APIs
 
 *Built-in Plugins*:
@@ -256,8 +264,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Database
 
-**25 migrations total**:
-- Core schema: events, plugins, users, anonymization, audit log
+**33 migrations total**:
+- Core schema: events, plugins, engineers, anonymization, audit log
 - Alert System: 4 tables, 6 indexes
 - Goal Tracking: 5 tables, 7 indexes
 - Skill Development: 5 tables, 7 indexes
@@ -266,6 +274,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Predictive Analytics: 5 tables, 7 indexes
 - Action Tracking: 5 tables, 8 indexes
 - Dashboard System: 2 tables, 4 indexes
+- Universal Schema: metric_values, entity_attributes, correlations, plugin_manifests, event_type_registry, widget_registry (migrations 029-033)
+- Post-migration cleanup: Removed legacy code referencing deleted tables, fixed 3 critical runtime bugs in scoring and team services
 
 ### API Endpoints
 

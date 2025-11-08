@@ -285,14 +285,10 @@ func (s *Server) handlePerformanceIndividual(w http.ResponseWriter, r *http.Requ
 
 	// Parse date range from query parameters
 	query := r.URL.Query()
-	startDateStr := query.Get("start_date")
-	endDateStr := query.Get("end_date")
-
-	// Default to last 90 days if not specified
 	endDate := time.Now().UTC()
 	startDate := endDate.AddDate(0, 0, -90)
 
-	if startDateStr != "" {
+	if startDateStr := query.Get("start_date"); startDateStr != "" {
 		parsed, err := time.Parse("2006-01-02", startDateStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid start_date format (expected YYYY-MM-DD)", err)
@@ -301,7 +297,7 @@ func (s *Server) handlePerformanceIndividual(w http.ResponseWriter, r *http.Requ
 		startDate = parsed
 	}
 
-	if endDateStr != "" {
+	if endDateStr := query.Get("end_date"); endDateStr != "" {
 		parsed, err := time.Parse("2006-01-02", endDateStr)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid end_date format (expected YYYY-MM-DD)", err)
@@ -310,18 +306,19 @@ func (s *Server) handlePerformanceIndividual(w http.ResponseWriter, r *http.Requ
 		endDate = parsed
 	}
 
-	// Get performance scores
-	scores, err := s.scoringStore.GetPerformanceScores(engineerID, startDate, endDate, 100)
+	// Get scores from metric_values (PDR-9 schema)
+	metrics, err := s.metricStore.GetEngineerScores(engineerID, startDate, endDate, 100)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get performance scores", err)
 		return
 	}
 
+	// Return metric_values directly (no legacy conversion)
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"engineer_id": engineerID,
 		"start_date":  startDate.Format("2006-01-02"),
 		"end_date":    endDate.Format("2006-01-02"),
-		"scores":      scores,
+		"metrics":     metrics,
 	})
 }
 

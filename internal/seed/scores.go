@@ -9,10 +9,10 @@ import (
 
 // Base scores by role level
 const (
-	BaseScoreJunior  = 70
-	BaseScoreMid     = 90
-	BaseScoreSenior  = 100
-	BaseScoreStaff   = 110
+	BaseScoreJunior = 70
+	BaseScoreMid    = 90
+	BaseScoreSenior = 100
+	BaseScoreStaff  = 110
 )
 
 // SeedScores generates performance scores for engineers and teams

@@ -11,11 +11,11 @@ import (
 
 // EventQueryFilters contains filters for event queries
 type EventQueryFilters struct {
-	Since          *time.Time              // Events after this time
-	Until          *time.Time              // Events before this time
-	EngineerID     string                  // Filter by engineer
-	Actor          string                  // Filter by actor
-	NormalizedData map[string]interface{}  // Filter by normalized data fields
+	Since          *time.Time             // Events after this time
+	Until          *time.Time             // Events before this time
+	EngineerID     string                 // Filter by engineer
+	Actor          string                 // Filter by actor
+	NormalizedData map[string]interface{} // Filter by normalized data fields
 }
 
 // Pagination contains pagination parameters

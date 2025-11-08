@@ -58,7 +58,7 @@ func TestCalculateCycleTime(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	svc := NewScoringService(db)
+	svc := NewScoringService(db, nil) // metricStore not used in tests
 	engineerID := "eng-123"
 	weekStart := time.Date(2025, 11, 1, 0, 0, 0, 0, time.UTC)
 	weekEnd := weekStart.AddDate(0, 0, 7)
@@ -111,7 +111,7 @@ func TestCalculateBugRate(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	svc := NewScoringService(db)
+	svc := NewScoringService(db, nil) // metricStore not used in tests
 	engineerID := "eng-123"
 	weekStart := time.Date(2025, 11, 1, 0, 0, 0, 0, time.UTC)
 	weekEnd := weekStart.AddDate(0, 0, 7)
@@ -174,7 +174,7 @@ func TestCalculateServicesTouched(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	svc := NewScoringService(db)
+	svc := NewScoringService(db, nil) // metricStore not used in tests
 	engineerID := "eng-123"
 	weekStart := time.Date(2025, 11, 1, 0, 0, 0, 0, time.UTC)
 
@@ -216,7 +216,7 @@ func TestCalculateRawMetrics(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	svc := NewScoringService(db)
+	svc := NewScoringService(db, nil) // metricStore not used in tests
 	engineerID := "eng-123"
 	weekStart := time.Date(2025, 11, 1, 0, 0, 0, 0, time.UTC)
 	weekEnd := weekStart.AddDate(0, 0, 7)

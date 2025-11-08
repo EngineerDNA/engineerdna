@@ -46,6 +46,7 @@ type ComponentScores struct {
 }
 
 // PerformanceScore represents a calculated performance score
+// NOTE: This is a computed view, not persisted. Data stored in metric_values table.
 type PerformanceScore struct {
 	ID                 string    `json:"id"`
 	EngineerID         string    `json:"engineer_id"`

@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { ScoreCard } from '../components/score-card';
-import type { PerformanceScore, Role } from '../api/types';
+import type { Role } from '../api/types';
+import type { MetricValue } from '../types/metrics';
 
 export function ScorecardPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,9 +36,9 @@ export function ScorecardPage() {
       const scorePromises = engineers.map(async (engineer) => {
         try {
           const result = await api.getPerformanceScores(engineer.id);
-          return { engineerId: engineer.id, scores: result.scores };
+          return { engineerId: engineer.id, metrics: result.metrics || [] };
         } catch {
-          return { engineerId: engineer.id, scores: [] };
+          return { engineerId: engineer.id, metrics: [] };
         }
       });
       return Promise.all(scorePromises);
@@ -46,11 +47,11 @@ export function ScorecardPage() {
     staleTime: 30000,
   });
 
-  const engineerScoresMap = useMemo(() => {
-    if (!engineerScoresQueries.data) return new Map<string, PerformanceScore | null>();
-    const map = new Map<string, PerformanceScore | null>();
-    engineerScoresQueries.data.forEach(({ engineerId, scores }) => {
-      map.set(engineerId, scores && scores.length > 0 ? scores[0] : null);
+  const engineerMetricsMap = useMemo(() => {
+    if (!engineerScoresQueries.data) return new Map<string, MetricValue[]>();
+    const map = new Map<string, MetricValue[]>();
+    engineerScoresQueries.data.forEach(({ engineerId, metrics }) => {
+      map.set(engineerId, metrics);
     });
     return map;
   }, [engineerScoresQueries.data]);
@@ -65,13 +66,13 @@ export function ScorecardPage() {
 
   const sortedEngineers = useMemo(() => {
     return [...engineers].sort((a, b) => {
-      const scoreA = engineerScoresMap.get(a.id);
-      const scoreB = engineerScoresMap.get(b.id);
-      const totalA = scoreA?.total_score || 0;
-      const totalB = scoreB?.total_score || 0;
+      const metricsA = engineerMetricsMap.get(a.id) || [];
+      const metricsB = engineerMetricsMap.get(b.id) || [];
+      const totalA = metricsA.find((m) => m.metric_name === 'engineer_total_score')?.value || 0;
+      const totalB = metricsB.find((m) => m.metric_name === 'engineer_total_score')?.value || 0;
       return totalB - totalA;
     });
-  }, [engineers, engineerScoresMap]);
+  }, [engineers, engineerMetricsMap]);
 
   const getScoreStatus = (
     score: number | null | undefined
@@ -97,8 +98,10 @@ export function ScorecardPage() {
 
     if (statusFilter !== 'all') {
       result = result.filter((engineer) => {
-        const score = engineerScoresMap.get(engineer.id);
-        return getScoreStatus(score?.total_score) === statusFilter;
+        const metrics = engineerMetricsMap.get(engineer.id) || [];
+        const totalScore =
+          metrics.find((m) => m.metric_name === 'engineer_total_score')?.value || 0;
+        return getScoreStatus(totalScore) === statusFilter;
       });
     }
 
@@ -107,7 +110,7 @@ export function ScorecardPage() {
     }
 
     return result;
-  }, [sortedEngineers, searchQuery, statusFilter, roleFilter, engineerScoresMap]);
+  }, [sortedEngineers, searchQuery, statusFilter, roleFilter, engineerMetricsMap]);
 
   if (engineersLoading || rolesLoading) {
     return (
@@ -212,9 +215,11 @@ export function ScorecardPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filteredEngineers.map((engineer) => {
-            const score = engineerScoresMap.get(engineer.id) || null;
+            const metrics = engineerMetricsMap.get(engineer.id) || [];
             const role = engineer.role_id ? rolesMap.get(engineer.role_id) || null : null;
-            return <ScoreCard key={engineer.id} engineer={engineer} score={score} role={role} />;
+            return (
+              <ScoreCard key={engineer.id} engineer={engineer} metrics={metrics} role={role} />
+            );
           })}
         </div>
       )}

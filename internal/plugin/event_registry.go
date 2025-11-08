@@ -10,18 +10,18 @@ import (
 
 // FieldDef defines a field in an event schema
 type FieldDef struct {
-	Type     string   `json:"type"`      // "string", "timestamp", "integer", "enum"
-	Required bool     `json:"required"`  // Whether field is required
-	Enum     []string `json:"enum"`      // Valid values for enum type
+	Type     string   `json:"type"`     // "string", "timestamp", "integer", "enum"
+	Required bool     `json:"required"` // Whether field is required
+	Enum     []string `json:"enum"`     // Valid values for enum type
 }
 
 // EventTypeRegistration represents a mapping from source event type to normalized type
 type EventTypeRegistration struct {
-	PluginName       string            `json:"plugin_name"`        // Plugin that provides this event type
-	SourceType       string            `json:"source_type"`        // Source-specific type (e.g., "pull_request")
-	NormalizedType   string            `json:"normalized_type"`    // Normalized type (e.g., "code_review")
-	Schema           map[string]FieldDef `json:"schema"`           // Field definitions
-	NormalizationMap map[string]string `json:"normalization_map"`  // Normalized field -> source field mapping
+	PluginName       string              `json:"plugin_name"`       // Plugin that provides this event type
+	SourceType       string              `json:"source_type"`       // Source-specific type (e.g., "pull_request")
+	NormalizedType   string              `json:"normalized_type"`   // Normalized type (e.g., "code_review")
+	Schema           map[string]FieldDef `json:"schema"`            // Field definitions
+	NormalizationMap map[string]string   `json:"normalization_map"` // Normalized field -> source field mapping
 }
 
 // EventTypeRegistry manages event type registrations

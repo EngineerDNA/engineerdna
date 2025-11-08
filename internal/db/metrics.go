@@ -184,3 +184,154 @@ func (s *MetricStore) GetByMetricName(name string, start, end time.Time, limit i
 
 	return metrics, nil
 }
+
+// GetEngineerScores retrieves all performance scores for an engineer
+// Replaces GetPerformanceScores from scoring.go
+func (s *MetricStore) GetEngineerScores(engineerID string, startDate, endDate time.Time, limit int) ([]*models.MetricValue, error) {
+	if limit <= 0 {
+		limit = DefaultQueryLimit
+	}
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
+	}
+
+	query := `
+		SELECT id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at
+		FROM metric_values
+		WHERE metric_name LIKE 'engineer_%_score'
+		  AND json_extract(dimensions, '$.engineer_id') = ?
+		  AND timestamp >= ?
+		  AND timestamp <= ?
+		ORDER BY timestamp DESC, metric_name
+		LIMIT ?
+	`
+
+	rows, err := s.db.Query(query, engineerID, startDate, endDate, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query engineer scores: %w", err)
+	}
+	defer rows.Close()
+
+	var metrics []*models.MetricValue
+	for rows.Next() {
+		var metric models.MetricValue
+		var dimensionsJSON sql.NullString
+
+		err := rows.Scan(&metric.ID, &metric.MetricName, &metric.Source, &metric.Timestamp, &metric.Granularity, &metric.Value, &metric.Unit, &dimensionsJSON, &metric.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan metric: %w", err)
+		}
+
+		if dimensionsJSON.Valid && dimensionsJSON.String != "" {
+			if err := json.Unmarshal([]byte(dimensionsJSON.String), &metric.Dimensions); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal dimensions: %w", err)
+			}
+		}
+
+		metrics = append(metrics, &metric)
+	}
+
+	return metrics, rows.Err()
+}
+
+// GetTeamScores retrieves all performance scores for a team
+func (s *MetricStore) GetTeamScores(teamID string, startDate, endDate time.Time, limit int) ([]*models.MetricValue, error) {
+	if limit <= 0 {
+		limit = DefaultQueryLimit
+	}
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
+	}
+
+	query := `
+		SELECT id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at
+		FROM metric_values
+		WHERE metric_name LIKE 'team_%_score'
+		  AND json_extract(dimensions, '$.team_id') = ?
+		  AND timestamp >= ?
+		  AND timestamp <= ?
+		ORDER BY timestamp DESC, metric_name
+		LIMIT ?
+	`
+
+	rows, err := s.db.Query(query, teamID, startDate, endDate, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query team scores: %w", err)
+	}
+	defer rows.Close()
+
+	var metrics []*models.MetricValue
+	for rows.Next() {
+		var metric models.MetricValue
+		var dimensionsJSON sql.NullString
+
+		err := rows.Scan(&metric.ID, &metric.MetricName, &metric.Source, &metric.Timestamp, &metric.Granularity, &metric.Value, &metric.Unit, &dimensionsJSON, &metric.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan metric: %w", err)
+		}
+
+		if dimensionsJSON.Valid && dimensionsJSON.String != "" {
+			if err := json.Unmarshal([]byte(dimensionsJSON.String), &metric.Dimensions); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal dimensions: %w", err)
+			}
+		}
+
+		metrics = append(metrics, &metric)
+	}
+
+	return metrics, rows.Err()
+}
+
+// GetMetricTimeseries retrieves a time series of metric values
+func (s *MetricStore) GetMetricTimeseries(metricName, entityType, entityID, granularity string, count int) ([]*models.MetricValue, error) {
+	if count <= 0 {
+		count = 30
+	}
+	if count > MaxQueryLimit {
+		count = MaxQueryLimit
+	}
+
+	query := `
+		SELECT id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at
+		FROM metric_values
+		WHERE metric_name = ?
+		  AND granularity = ?
+	`
+	args := []interface{}{metricName, granularity}
+
+	// Filter by entity if specified
+	if entityType != "" && entityID != "" {
+		query += ` AND json_extract(dimensions, '$.' || ?) = ?`
+		args = append(args, entityType+"_id", entityID)
+	}
+
+	query += ` ORDER BY timestamp DESC LIMIT ?`
+	args = append(args, count)
+
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query metric timeseries: %w", err)
+	}
+	defer rows.Close()
+
+	var metrics []*models.MetricValue
+	for rows.Next() {
+		var metric models.MetricValue
+		var dimensionsJSON sql.NullString
+
+		err := rows.Scan(&metric.ID, &metric.MetricName, &metric.Source, &metric.Timestamp, &metric.Granularity, &metric.Value, &metric.Unit, &dimensionsJSON, &metric.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan metric: %w", err)
+		}
+
+		if dimensionsJSON.Valid && dimensionsJSON.String != "" {
+			if err := json.Unmarshal([]byte(dimensionsJSON.String), &metric.Dimensions); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal dimensions: %w", err)
+			}
+		}
+
+		metrics = append(metrics, &metric)
+	}
+
+	return metrics, rows.Err()
+}

@@ -11,39 +11,57 @@ import (
 
 // Service handles cost calculation business logic
 type Service struct {
-	store     *db.CostROIStore
-	teamStore *db.TeamStore
+	store          *db.CostROIStore
+	teamStore      *db.TeamStore
+	attributeStore *db.AttributeStore
 }
 
 // NewService creates a new cost service
-func NewService(store *db.CostROIStore, teamStore *db.TeamStore) *Service {
+func NewService(store *db.CostROIStore, teamStore *db.TeamStore, attributeStore *db.AttributeStore) *Service {
 	return &Service{
-		store:     store,
-		teamStore: teamStore,
+		store:          store,
+		teamStore:      teamStore,
+		attributeStore: attributeStore,
 	}
 }
 
 // CalculateEngineerCost gets current cost for an engineer
 func (s *Service) CalculateEngineerCost(engineerID string) (float64, error) {
-	config, err := s.store.GetCurrentCostForEntity("engineer", engineerID)
+	// Get cost from entity_attributes (PDR-9 schema)
+	attr, err := s.attributeStore.GetCurrentAttributeValue("engineer", engineerID, "monthly_cost")
 	if err != nil {
 		return 0, fmt.Errorf("failed to get engineer cost: %w", err)
 	}
 
-	// If no specific config, try org default
-	if config == nil {
-		config, err = s.store.GetCurrentCostForEntity("org", "")
-		if err != nil {
-			return 0, fmt.Errorf("failed to get org cost: %w", err)
+	if attr != nil {
+		// Parse cost value
+		var cost float64
+		if costStr, ok := attr.(string); ok {
+			_, err := fmt.Sscanf(costStr, "%f", &cost)
+			if err == nil {
+				return cost, nil
+			}
 		}
 	}
 
-	// If still no config, return error
-	if config == nil {
-		return 0, fmt.Errorf("no cost configuration found for engineer: %s", engineerID)
+	// If no specific config, try role-based default
+	role := GetRoleForEngineer(engineerID)
+	attr, err = s.attributeStore.GetCurrentAttributeValue("role", role, "monthly_cost")
+	if err != nil {
+		return 0, fmt.Errorf("failed to get role cost: %w", err)
 	}
 
-	return config.MonthlyCost, nil
+	if attr != nil {
+		var cost float64
+		if costStr, ok := attr.(string); ok {
+			_, err := fmt.Sscanf(costStr, "%f", &cost)
+			if err == nil {
+				return cost, nil
+			}
+		}
+	}
+
+	return 0, fmt.Errorf("no cost configuration found for engineer: %s", engineerID)
 }
 
 // CalculateTeamCost aggregates team costs

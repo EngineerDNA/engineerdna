@@ -136,7 +136,6 @@ func (s *Server) SetupRoutes() {
 	s.mux.HandleFunc("/api/features/", s.handleFeatureByID)
 	s.mux.HandleFunc("/api/roi/report", s.handleROIReport)
 	s.mux.HandleFunc("/api/investment/breakdown", s.handleInvestmentBreakdown)
-	s.mux.HandleFunc("/api/cost/efficiency", s.handleCostEfficiency)
 
 	// Manager Notes & Context
 	s.mux.HandleFunc("/api/notes", s.handleNotes)

@@ -35,7 +35,7 @@ func TestDetectBurnoutRisks(t *testing.T) {
 		t.Fatalf("failed to create events table: %v", err)
 	}
 
-	service := NewScoringService(db)
+	service := NewScoringService(db, nil) // metricStore not used in burnout detection tests
 
 	tests := []struct {
 		name              string
@@ -262,7 +262,7 @@ func TestCountLateNightCommits(t *testing.T) {
 		t.Fatalf("failed to create events table: %v", err)
 	}
 
-	service := NewScoringService(db)
+	service := NewScoringService(db, nil) // metricStore not used in burnout detection tests
 	engineerID := "test-eng"
 	weekStart := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)
 	weekEnd := weekStart.AddDate(0, 0, 7)
@@ -325,7 +325,7 @@ func TestCountWeekendCommits(t *testing.T) {
 		t.Fatalf("failed to create events table: %v", err)
 	}
 
-	service := NewScoringService(db)
+	service := NewScoringService(db, nil) // metricStore not used in burnout detection tests
 	engineerID := "test-eng"
 	// Start on Monday Nov 3, 2025
 	weekStart := time.Date(2025, 11, 3, 0, 0, 0, 0, time.UTC)

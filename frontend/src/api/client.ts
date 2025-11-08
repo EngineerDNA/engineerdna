@@ -20,7 +20,6 @@ import type {
   UpdateScheduleRequest,
   Role,
   ScoringWeights,
-  PerformanceScore,
   Team,
   TeamScorecard,
   TeamHierarchyNode,
@@ -37,6 +36,7 @@ import type {
   LiveMetrics,
   SprintBurndownData,
 } from './types';
+import type { EngineerScoresResponse } from '../types/metrics';
 import { DEFAULT_AUDIT_LOG_LIMIT } from '../constants';
 
 const API_BASE = '/api';
@@ -294,12 +294,9 @@ export const api = {
     if (startDate) params.set('start_date', startDate);
     if (endDate) params.set('end_date', endDate);
     const query = params.toString();
-    return fetchAPI<{
-      engineer_id: string;
-      start_date: string;
-      end_date: string;
-      scores: PerformanceScore[];
-    }>(`/performance/individual/${engineerId}${query ? `?${query}` : ''}`);
+    return fetchAPI<EngineerScoresResponse>(
+      `/performance/individual/${engineerId}${query ? `?${query}` : ''}`
+    );
   },
 
   // Teams

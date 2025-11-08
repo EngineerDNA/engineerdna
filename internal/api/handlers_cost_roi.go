@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -42,25 +43,32 @@ func (s *Server) listCostConfiguration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	configs, total, err := s.costROIStore.ListCostConfigurations(entityType, limit, offset)
+	// Get cost attributes from entity_attributes (PDR-9 schema)
+	filters := make(map[string]interface{})
+	if entityType != "" {
+		filters["entity_type"] = entityType
+	}
+	filters["attribute_name"] = "monthly_cost"
+	filters["as_of"] = time.Now().UTC()
+
+	attrs, err := s.attributeStore.List(filters, limit, offset)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to list cost configurations", err)
+		respondError(w, http.StatusInternalServerError, "Failed to list cost attributes", err)
 		return
 	}
 
-	respondPaginated(w, configs, total, limit, offset)
+	// Return entity attributes directly
+	respondPaginated(w, attrs, len(attrs), limit, offset)
 }
 
 func (s *Server) createCostConfiguration(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		EntityType    string  `json:"entity_type"`
-		EntityID      *string `json:"entity_id"`
-		Role          *string `json:"role"`
+		EntityID      string  `json:"entity_id"`
 		MonthlyCost   float64 `json:"monthly_cost"`
 		Currency      string  `json:"currency"`
 		EffectiveFrom string  `json:"effective_from"`
 		EffectiveTo   *string `json:"effective_to"`
-		Notes         string  `json:"notes"`
 	}
 
 	if err := decodeAndValidateJSON(r, &req); err != nil {
@@ -68,8 +76,8 @@ func (s *Server) createCostConfiguration(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if req.EntityType == "" || req.MonthlyCost <= 0 {
-		respondError(w, http.StatusBadRequest, "entity_type and monthly_cost are required", nil)
+	if req.EntityType == "" || req.EntityID == "" || req.MonthlyCost <= 0 {
+		respondError(w, http.StatusBadRequest, "entity_type, entity_id, and monthly_cost are required", nil)
 		return
 	}
 
@@ -79,37 +87,35 @@ func (s *Server) createCostConfiguration(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var effectiveTo *time.Time
+	var validUntil *time.Time
 	if req.EffectiveTo != nil {
 		t, err := time.Parse("2006-01-02", *req.EffectiveTo)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid effective_to format", err)
 			return
 		}
-		effectiveTo = &t
+		validUntil = &t
 	}
 
-	config := &models.CostConfiguration{
+	// Create entity attribute directly (PDR-9 schema)
+	attr := &models.EntityAttribute{
 		EntityType:    req.EntityType,
 		EntityID:      req.EntityID,
-		Role:          req.Role,
-		MonthlyCost:   req.MonthlyCost,
-		Currency:      req.Currency,
-		EffectiveFrom: effectiveFrom.UTC(),
-		EffectiveTo:   effectiveTo,
-		Notes:         req.Notes,
+		AttributeName: "monthly_cost",
+		Value:         fmt.Sprintf("%.2f", req.MonthlyCost),
+		ValueType:     "currency",
+		ValidFrom:     effectiveFrom.UTC(),
+		ValidUntil:    validUntil,
+		Source:        "user_input",
 	}
 
-	if config.Currency == "" {
-		config.Currency = "USD"
-	}
-
-	if err := s.costROIStore.CreateCostConfiguration(config); err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to create cost configuration", err)
+	if err := s.attributeStore.Create(attr); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to create cost attribute", err)
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, config)
+	// Return entity attribute directly
+	respondJSON(w, http.StatusCreated, attr)
 }
 
 func (s *Server) updateCostConfiguration(w http.ResponseWriter, r *http.Request) {
@@ -125,38 +131,63 @@ func (s *Server) handleTeamCost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cost, err := s.costService.CalculateTeamCost(teamID)
+	// Get team cost from entity_attributes table (PDR-9 migration)
+	// This could be a direct team cost attribute OR sum of member costs
+	costAttr, err := s.attributeStore.GetCurrentAttributeValue("team", teamID, "monthly_cost")
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to calculate team cost", err)
+		respondError(w, http.StatusInternalServerError, "Failed to get team cost", err)
 		return
+	}
+
+	var monthlyCost float64
+	if costAttr != nil {
+		// Team has a direct cost attribute
+		if costStr, ok := costAttr.(string); ok {
+			fmt.Sscanf(costStr, "%f", &monthlyCost)
+		}
+	} else {
+		// Fall back to calculating from service (which might sum engineer costs)
+		cost, err := s.costService.CalculateTeamCost(teamID)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to calculate team cost", err)
+			return
+		}
+		monthlyCost = cost
 	}
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"team_id":      teamID,
-		"monthly_cost": cost,
+		"monthly_cost": monthlyCost,
 		"currency":     "USD",
 	})
 }
 
 func (s *Server) handleEngineerCost(w http.ResponseWriter, r *http.Request) {
-	// Extract engineer ID from path
 	engineerID := strings.TrimPrefix(r.URL.Path, "/api/cost/engineer/")
 	if engineerID == "" {
 		http.Error(w, "Engineer ID required", http.StatusBadRequest)
 		return
 	}
 
-	cost, err := s.costService.CalculateEngineerCost(engineerID)
+	// Get cost from entity_attributes (PDR-9 schema)
+	costAttr, err := s.attributeStore.GetEngineerCost(engineerID)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to calculate engineer cost", err)
+		respondError(w, http.StatusInternalServerError, "Failed to get engineer cost", err)
 		return
 	}
 
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"engineer_id":  engineerID,
-		"monthly_cost": cost,
-		"currency":     "USD",
-	})
+	if costAttr == nil {
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"entity_type":    "engineer",
+			"entity_id":      engineerID,
+			"attribute_name": "monthly_cost",
+			"attributes":     []interface{}{},
+		})
+		return
+	}
+
+	// Return entity attribute directly
+	respondJSON(w, http.StatusOK, costAttr)
 }
 
 // Feature Value Handlers
@@ -466,32 +497,4 @@ func (s *Server) handleInvestmentBreakdown(w http.ResponseWriter, r *http.Reques
 	}
 
 	respondJSON(w, http.StatusOK, breakdown)
-}
-
-// Cost Efficiency Metrics Handler
-
-func (s *Server) handleCostEfficiency(w http.ResponseWriter, r *http.Request) {
-	timePeriod := r.URL.Query().Get("time_period")
-	entityType := r.URL.Query().Get("entity_type")
-
-	if timePeriod == "" || entityType == "" {
-		respondError(w, http.StatusBadRequest, "time_period and entity_type parameters required", nil)
-		return
-	}
-
-	entityID := r.URL.Query().Get("entity_id")
-	var entityIDPtr *string
-	if entityID != "" {
-		entityIDPtr = &entityID
-	}
-
-	metrics, err := s.costROIStore.GetCostEfficiencyMetrics(timePeriod, entityType, entityIDPtr, 100)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to get cost efficiency metrics", err)
-		return
-	}
-
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"metrics": metrics,
-	})
 }

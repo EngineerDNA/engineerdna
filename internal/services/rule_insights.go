@@ -32,46 +32,46 @@ func NewRuleBasedInsights(
 
 // ThresholdBreach represents a metric that has exceeded its threshold
 type ThresholdBreach struct {
-	MetricName    string    `json:"metric_name"`
-	CurrentValue  float64   `json:"current_value"`
-	Threshold     float64   `json:"threshold"`
-	Severity      string    `json:"severity"` // "warning", "critical"
-	Message       string    `json:"message"`
-	DetectedAt    time.Time `json:"detected_at"`
+	MetricName   string    `json:"metric_name"`
+	CurrentValue float64   `json:"current_value"`
+	Threshold    float64   `json:"threshold"`
+	Severity     string    `json:"severity"` // "warning", "critical"
+	Message      string    `json:"message"`
+	DetectedAt   time.Time `json:"detected_at"`
 }
 
 // SignificantChange represents a metric with significant week-over-week change
 type SignificantChange struct {
-	MetricName      string    `json:"metric_name"`
-	CurrentValue    float64   `json:"current_value"`
-	PreviousValue   float64   `json:"previous_value"`
-	ChangePercent   float64   `json:"change_percent"`
-	Direction       string    `json:"direction"` // "increase", "decrease"
-	Message         string    `json:"message"`
-	DetectedAt      time.Time `json:"detected_at"`
+	MetricName    string    `json:"metric_name"`
+	CurrentValue  float64   `json:"current_value"`
+	PreviousValue float64   `json:"previous_value"`
+	ChangePercent float64   `json:"change_percent"`
+	Direction     string    `json:"direction"` // "increase", "decrease"
+	Message       string    `json:"message"`
+	DetectedAt    time.Time `json:"detected_at"`
 }
 
 // WeeklySummary represents insights for a team for the week
 type WeeklySummary struct {
-	TeamID               string               `json:"team_id"`
-	WeekStart            time.Time            `json:"week_start"`
-	WeekEnd              time.Time            `json:"week_end"`
-	ThresholdBreaches    []ThresholdBreach    `json:"threshold_breaches"`
-	SignificantChanges   []SignificantChange  `json:"significant_changes"`
-	StaleReviews         int                  `json:"stale_reviews"`
-	GeneratedAt          time.Time            `json:"generated_at"`
+	TeamID             string              `json:"team_id"`
+	WeekStart          time.Time           `json:"week_start"`
+	WeekEnd            time.Time           `json:"week_end"`
+	ThresholdBreaches  []ThresholdBreach   `json:"threshold_breaches"`
+	SignificantChanges []SignificantChange `json:"significant_changes"`
+	StaleReviews       int                 `json:"stale_reviews"`
+	GeneratedAt        time.Time           `json:"generated_at"`
 }
 
 // Thresholds define acceptable ranges for metrics
 var DefaultThresholds = map[string]struct {
-	Warning  float64
-	Critical float64
+	Warning     float64
+	Critical    float64
 	HigherIsBad bool
 }{
-	"cycle_time_days": {Warning: 3.0, Critical: 5.0, HigherIsBad: true},
-	"review_time_hours": {Warning: 24.0, Critical: 48.0, HigherIsBad: true},
-	"pr_size_lines": {Warning: 500.0, Critical: 1000.0, HigherIsBad: true},
-	"deployment_frequency": {Warning: 5.0, Critical: 3.0, HigherIsBad: false},
+	"cycle_time_days":       {Warning: 3.0, Critical: 5.0, HigherIsBad: true},
+	"review_time_hours":     {Warning: 24.0, Critical: 48.0, HigherIsBad: true},
+	"pr_size_lines":         {Warning: 500.0, Critical: 1000.0, HigherIsBad: true},
+	"deployment_frequency":  {Warning: 5.0, Critical: 3.0, HigherIsBad: false},
 	"test_coverage_percent": {Warning: 70.0, Critical: 50.0, HigherIsBad: false},
 }
 
@@ -210,8 +210,8 @@ func (r *RuleBasedInsights) DetectStaleReviews() (int, error) {
 
 	// Query open PRs (reduced limit to prevent memory exhaustion)
 	filters := map[string]interface{}{
-		"types": []string{"pull_request"},
-		"end_time": now,
+		"types":      []string{"pull_request"},
+		"end_time":   now,
 		"start_time": staleThreshold.AddDate(0, 0, -30), // Last 30 days
 	}
 

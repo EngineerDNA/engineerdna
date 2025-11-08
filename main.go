@@ -128,19 +128,19 @@ func cmdServe() {
 
 	anonService := anonymization.NewService(anonStore)
 	identityService := identity.NewService(identityStore)
-	scoringService := scoring.NewScoringService(database.DB)
-	teamService := team.NewService(database.DB)
+	scoringService := scoring.NewScoringService(database.DB, metricStore)
+	teamService := team.NewService(database.DB, metricStore)
 	promotionService := promotion.NewService(database.DB)
 	planningService := planning.NewService(planningStore)
-	goalsService := goals.NewService(goalsStore, scoringStore)
+	goalsService := goals.NewService(goalsStore, scoringStore, metricStore)
 	skillsService := skills.NewService(skillsStore, eventStore)
-	costService := cost.NewService(costROIStore, teamStore)
+	costService := cost.NewService(costROIStore, teamStore, attributeStore)
 	roiService := roi.NewService(costROIStore)
 	costAnalyzer := cost.NewAnalyzer(costROIStore, eventStore, costService)
 	contextService := context.NewService(contextStore, identityStore)
 	sentimentService := sentiment.NewService(contextStore, teamStore)
 	sentimentAnalyzer := sentiment.NewAnalyzer(contextStore, eventStore)
-	forecastingService := forecasting.NewForecastingService(database.DB, forecastingStore, planningStore, scoringStore, goalsStore)
+	forecastingService := forecasting.NewForecastingService(database.DB, forecastingStore, planningStore, scoringStore, metricStore, goalsStore)
 	dashboardService := dashboards.NewService(dashboardStore, scoringStore, eventStore, alertsStore, goalsStore, teamStore)
 	metricEngine := services.NewMetricEngine(eventStore, metricStore, attributeStore)
 	correlationEngine := services.NewCorrelationEngine(metricEngine, eventStore, metricStore, attributeStore, correlationStore)
@@ -181,7 +181,7 @@ func cmdServe() {
 	defer sched.Stop()
 
 	// Initialize alert system
-	alertScheduler := alerts.NewScheduler(database.DB, alertsStore, eventStore, scoringStore, teamStore)
+	alertScheduler := alerts.NewScheduler(database.DB, alertsStore, eventStore, scoringStore, metricStore, teamStore)
 	alertScheduler.Start()
 	defer alertScheduler.Stop()
 
@@ -196,7 +196,7 @@ func cmdServe() {
 	}
 
 	// Create default cost configuration (only on first run)
-	if err := cost.CreateDefaultCostConfiguration(costROIStore); err != nil {
+	if err := cost.CreateDefaultCostConfiguration(attributeStore); err != nil {
 		log.Printf("Warning: Failed to create default cost configuration: %v", err)
 	}
 
