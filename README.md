@@ -24,10 +24,12 @@ Engineering metrics and insights platform with privacy-first anonymization and b
   - CSV bulk import with intelligent column mapping
   - Activity metrics per engineer (PRs, reviews, issues, commits)
 
-- **Plugin Architecture**: Extensible system with three types of plugins:
-  - **Source**: Bring data IN (GitHub, CSV, manual entry)
+- **Plugin Architecture**: Extensible system with five types of plugins:
+  - **Source**: Bring event data IN (GitHub, Jira, GitLab)
+  - **Metric Source**: Bring metric data IN (AWS cost, team capacity)
+  - **Attribute Source**: Bring entity attributes IN (HRIS, org charts)
   - **Destination**: Send data OUT (Google Sheets, Slack, PDF)
-  - **Processor**: Transform and analyze data (AI insights, custom metrics)
+  - **Processor**: Transform and analyze data (AI insights, correlations)
 
 - **Privacy First**:
   - Built-in anonymization with multiple strategies (sequential, hash, UUID)
@@ -91,6 +93,32 @@ Engineering metrics and insights platform with privacy-first anonymization and b
   - Follow-up scheduling and reminders
 
 - **Dashboard Builder**: Customizable dashboards with 6 widget types (Number Card, Timeseries Chart, Bar Chart, Table, Status Indicator, Activity Feed). Includes 4 default templates: Individual Contributor, Team Lead, Director, and Planning. Pre-computed metric snapshots for performance.
+
+### PDR-9 Features (v1.3.0)
+
+- **Multi-Modal Data System**: Support for three data types beyond events
+  - **Metrics**: Time-series measurements (AWS cost, team velocity, capacity)
+  - **Attributes**: Facts about entities with temporal validity (team size, budget, location)
+  - **Correlations**: Cross-data-type relationships (cost per feature, velocity vs team size)
+
+- **Event Normalization**: Multi-source event support
+  - Normalize events from different sources to common types (GitHub PR + GitLab MR → code_review)
+  - Event type registry for cross-source analytics
+  - Plugin-declared normalization mappings
+
+- **Metric Calculation Engine**: Compute metrics from events using SQL aggregations
+  - Parameterized queries for security
+  - Scheduled metric computation
+  - Multi-dimensional metric support
+
+- **Widget Registry**: Plugin-provided UI components
+  - Plugins can register custom dashboard widgets
+  - Standard widget types for common use cases
+  - Frontend integration for custom widgets
+
+- **New Plugin Types**:
+  - **Metric Source**: Plugins that bring metric data (AWS cost, budget tracking)
+  - **Attribute Source**: Plugins that bring entity attributes (HRIS, org charts)
 
 ## Dashboard Builder
 

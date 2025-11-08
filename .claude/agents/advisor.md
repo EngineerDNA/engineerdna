@@ -488,14 +488,18 @@ if field.Secret {
 ## PROJECT-SPECIFIC PATTERNS
 
 ### EngineerDNA-Specific Checks
-- **Plugin System**: JSON-RPC over stdin/stdout, three types (Source, Destination, Processor)
+- **Plugin System**: JSON-RPC over stdin/stdout, five types (Source, Metric Source, Attribute Source, Destination, Processor)
 - **Plugin Discovery**: Check both `~/.engineerdna/plugins/` and `./plugins/` directories
-- **Event Model**: All data as events with type, source, actor, data, anonymized flag
+- **Data Model**: Three data types - Events (discrete actions), Metrics (time-series), Attributes (entity facts)
+- **Event Normalization**: Multi-source events normalized to common types (GitHub PR + GitLab MR → code_review)
 - **Anonymization**: Three strategies (sequential, uuid, hash), bidirectional mapping in DB
 - **Encryption**: AES-256-GCM for API keys/secrets, master key in OS keychain or env var
 - **Single Binary**: Frontend embedded via `//go:embed frontend/dist`, SQLite database
 - **Localhost-Only**: Runs on 127.0.0.1:3847 (no network authentication in V1)
 - **Audit Trail**: All exports and processor calls must be logged with anonymization status
+- **Plugin Manifests**: Plugins register capabilities (provides_metrics, provides_event_types, provides_widgets, provides_correlations)
+- **Temporal Attributes**: Attributes have valid_from/valid_until for tracking changes over time
+- **Multi-Dimensional Metrics**: Metrics support dimensions (service, region, environment)
 
 ### Performance Requirements
 - **Avoid N+1 Queries**: Use relations/joins

@@ -3,10 +3,12 @@
 ## PRODUCT OVERVIEW
 EngineerDNA is an engineering metrics and insights platform with a powerful plugin architecture. **Local desktop application** (like Jupyter or Grafana) that runs on `localhost:3847`. Single cross-platform binary (Go + embedded React) with SQLite database.
 
+**Multi-Modal Data Model**: Supports three data types - Events (discrete actions), Metrics (time-series measurements), Attributes (entity facts).
+
 ### How It Works
 1. **Install & Run**: Single binary runs locally on your machine
-2. **Connect Data**: Plugins sync from GitHub, Jira, CSV, etc.
-3. **Analyze & Export**: Process metrics with AI, export to dashboards/reports
+2. **Connect Data**: Plugins sync events (GitHub, Jira), metrics (AWS cost), attributes (HRIS)
+3. **Analyze & Export**: Process metrics with AI, compute correlations, export to dashboards/reports
 4. **Privacy First**: Anonymization for external processing, encryption for secrets
 
 ## NAVIGATION
@@ -24,14 +26,18 @@ Each major directory contains its own CLAUDE.md with context-specific instructio
 
 | Term | Definition | Key Rule |
 |------|------------|----------|
-| Event | Unit of engineering data (PR, issue, metric) | Immutable, timestamped in UTC |
+| Event | Discrete timestamped action (PR, commit, deploy) | Immutable, UTC timestamp, source + normalized type |
+| Metric | Time-series measurement (cost, velocity, hours) | Granular, multi-dimensional, timestamped |
+| Attribute | Fact about entity (team size, budget, location) | Temporal validity tracking (valid from/until) |
 | Engineer | Individual contributor tracked across data sources | Identity resolution via AI matching |
 | Team | Group of engineers with hierarchy support | Parent-child relationships allowed |
 | Identity | Distinct email/username from data sources | Must be resolved to an Engineer |
-| Plugin | External data connector (source/dest/processor) | JSON-RPC over stdin/stdout |
-| Source Plugin | Brings data IN (GitHub, CSV, Jira) | Implements `source.sync` |
+| Plugin | External data connector (5 types) | JSON-RPC over stdin/stdout |
+| Source Plugin | Brings event data IN (GitHub, Jira, GitLab) | Implements `source.sync` |
+| Metric Source Plugin | Brings metric data IN (AWS, budget, capacity) | Implements `metric_source.sync` |
+| Attribute Source Plugin | Brings attributes IN (HRIS, org chart) | Implements `attribute_source.sync` |
 | Destination Plugin | Sends data OUT (Sheets, Slack, PDF) | Implements `destination.export` |
-| Processor Plugin | Transforms data (AI analysis, metrics) | Requires anonymization for external APIs |
+| Processor Plugin | Transforms data (AI analysis, correlations) | Requires anonymization for external APIs |
 | Anonymization | PII protection for external transmission | Bidirectional mapping, 3 strategies |
 | Audit Log | Export and processing tracking | All anonymization logged |
 
@@ -75,6 +81,20 @@ Each major directory contains its own CLAUDE.md with context-specific instructio
 | Dashboard | Customizable visualization with widget layout | Templates are system dashboards (cannot be deleted) |
 | Widget | Visual component on dashboard | 6 types: number, timeseries, bar, table, status, feed |
 | Metric Snapshot | Pre-computed metric for performance | Computed hourly, stored by entity and period |
+
+### PDR-9 Entities (v1.3.0)
+
+| Term | Definition | Key Rule |
+|------|------------|----------|
+| Metric Value | Time-series measurement (cost, velocity, hours) | Timestamped, granular (hourly/daily/weekly/monthly), multi-dimensional |
+| Entity Attribute | Fact about entity with temporal validity | Team size, budget, location - valid from/until tracking |
+| Correlation | Cross-data-type relationship | Links events, metrics, attributes (e.g., cost per feature) |
+| Correlation Value | Computed correlation result | Time-windowed (day/week/month/quarter) with breakdown |
+| Plugin Manifest | Plugin capabilities registry | Stored in DB, tracks metrics/events/widgets/correlations provided |
+| Event Type Registry | Normalized event types for multi-source | GitHub PR + GitLab MR → code_review |
+| Widget Registry | Plugin-provided UI components | Plugins can register custom dashboard widgets |
+| Metric Source Plugin | Brings metric data IN | AWS cost, team attributes, budget tracking |
+| Attribute Source Plugin | Brings entity attributes IN | HRIS, org charts, team metadata |
 
 ## CRITICAL PROJECT-WIDE RULES
 
@@ -741,6 +761,93 @@ sqlite3 ~/.engineerdna/engineerdna.db "SELECT metric_name, MAX(computed_at) as l
 # Common issue: TanStack Query caching
 # staleTime: 30000ms = data cached for 30 seconds
 # Refresh page or wait 30 seconds for fresh data
+```
+
+### PDR-9 Feature Issues (v1.3.0)
+
+**Problem**: Metric values not syncing
+```bash
+# Check if metric source plugin is configured
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT name, type, enabled FROM plugins WHERE type = 'metric_source'"
+
+# Verify plugin manifest is registered
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT plugin_name, version, provides_metrics FROM plugin_manifests"
+
+# Check metric values table
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT metric_name, COUNT(*), MAX(timestamp) FROM metric_values GROUP BY metric_name"
+
+# Common issue: Plugin not declaring provides_metrics in plugin.json
+# Fix: Add provides_metrics array to plugin.json manifest
+```
+
+**Problem**: Entity attributes not appearing
+```bash
+# Check if attribute source plugin is running
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT name, type, last_sync FROM plugins WHERE type = 'attribute_source'"
+
+# Verify attributes are being created
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT entity_type, attribute_name, COUNT(*) FROM entity_attributes GROUP BY entity_type, attribute_name"
+
+# Check for expired attributes
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT * FROM entity_attributes WHERE valid_until IS NOT NULL AND valid_until < datetime('now')"
+
+# Common issue: Valid_until set incorrectly
+# Fix: Attributes should have valid_until = NULL for current values
+```
+
+**Problem**: Event normalization not working
+```bash
+# Check if plugin provides event type specs
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT plugin_name, provides_event_types FROM plugin_manifests"
+
+# Verify normalized_type is being set
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT type, normalized_type, COUNT(*) FROM events WHERE normalized_type IS NOT NULL GROUP BY type, normalized_type"
+
+# Common issue: Plugin not declaring provides_event_types in plugin.json
+# Fix: Add provides_event_types with normalization_map to plugin.json
+```
+
+**Problem**: Correlations showing no data
+```bash
+# Check if correlations are registered
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT name, plugin FROM correlations"
+
+# Verify correlation values are computed
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT correlation_id, COUNT(*), MAX(timestamp) FROM correlation_values GROUP BY correlation_id"
+
+# Check correlation definition
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT name, definition FROM correlations WHERE name = 'correlation_name'"
+
+# Common issue: Missing input metrics or events
+# Correlations require all input data types to exist
+# Fix: Ensure all plugins providing input data are syncing
+```
+
+**Problem**: Custom widgets not rendering
+```bash
+# Check widget registry
+curl http://127.0.0.1:3847/api/widgets/registry | jq .
+
+# Verify plugin registered widget
+sqlite3 ~/.engineerdna/engineerdna.db "SELECT plugin_name, provides_widgets FROM plugin_manifests"
+
+# Common issue: Widget type not implemented in frontend
+# Custom widgets require frontend component implementation
+# Fix: Add widget component to frontend/src/components/widgets/
+```
+
+**Problem**: API endpoints returning 404 for new data types
+```bash
+# Verify API routes are registered
+curl http://127.0.0.1:3847/api/metrics/values
+curl http://127.0.0.1:3847/api/attributes
+curl http://127.0.0.1:3847/api/correlations
+
+# Check server logs for route registration
+grep "routes" /tmp/engineerdna-backend.log
+
+# Common issue: Server not restarted after migration
+# Fix: Restart server to load new routes
 ```
 
 ## ARCHITECTURE DETAILS
