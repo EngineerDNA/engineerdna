@@ -219,6 +219,7 @@ temp/
 !**/CLAUDE.md
 !/README.md
 !/CHANGELOG.md
+!/CODE_OF_CONDUCT.md
 !/LICENSE.md
 !/CONTRIBUTING.md
 !/VERSIONING.md
