@@ -10,9 +10,8 @@ import (
 // AnalyzeWithProcessor analyzes events with a processor plugin
 func (e *Executor) AnalyzeWithProcessor(pluginName string, events []*models.Event, analysisType string, context map[string]interface{}) (*sdk.AnalyzeResult, error) {
 	// Enforce max event count to prevent unbounded resource usage
-	const maxEvents = 50000
-	if len(events) > maxEvents {
-		return nil, fmt.Errorf("too many events to analyze: %d (max %d)", len(events), maxEvents)
+	if len(events) > MaxPluginEvents {
+		return nil, fmt.Errorf("too many events to analyze: %d (max %d)", len(events), MaxPluginEvents)
 	}
 
 	// Load plugin config

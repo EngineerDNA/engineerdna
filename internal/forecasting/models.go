@@ -5,6 +5,13 @@ import (
 	"sort"
 )
 
+// Statistical constants for confidence intervals
+const (
+	ZScore95Confidence = 1.96  // 95% confidence interval
+	ZScore90Confidence = 1.645 // 90% confidence interval
+	ZScore80Confidence = 1.28  // 80% confidence interval
+)
+
 // Statistical prediction models
 
 // calculateMovingAverage computes weighted moving average
@@ -155,7 +162,7 @@ func LinearRegressionModel(historicalX, historicalY []float64, targetX float64) 
 // MonteCarloSimulation runs Monte Carlo simulation with variance
 func MonteCarloSimulation(baseValue, variance float64, simulations int) (low, high, mean float64) {
 	if simulations <= 0 {
-		simulations = 1000
+		simulations = DefaultMonteCarloSimulations
 	}
 
 	results := make([]float64, simulations)
@@ -169,8 +176,8 @@ func MonteCarloSimulation(baseValue, variance float64, simulations int) (low, hi
 
 	// Calculate statistics
 	mean = calculateMean(results)
-	low = calculatePercentile(results, 10)  // 10th percentile
-	high = calculatePercentile(results, 90) // 90th percentile
+	low = calculatePercentile(results, ConfidenceLevel10)
+	high = calculatePercentile(results, ConfidenceLevel90)
 
 	return low, high, mean
 }
@@ -207,15 +214,11 @@ func ExponentialSmoothing(values []float64, alpha float64) []float64 {
 
 // CalculateConfidenceInterval calculates confidence interval
 func CalculateConfidenceInterval(mean, stdDev float64, confidenceLevel float64) (low, high float64) {
-	// For 95% confidence, use 1.96 standard deviations
-	// For 90% confidence, use 1.645 standard deviations
-	// For 80% confidence, use 1.28 standard deviations
-
-	zScore := 1.96 // Default to 95%
-	if confidenceLevel == 90 {
-		zScore = 1.645
-	} else if confidenceLevel == 80 {
-		zScore = 1.28
+	zScore := ZScore95Confidence // Default to 95%
+	if confidenceLevel == float64(ConfidenceLevel90) {
+		zScore = ZScore90Confidence
+	} else if confidenceLevel == float64(ConfidenceLevel80) {
+		zScore = ZScore80Confidence
 	}
 
 	margin := zScore * stdDev

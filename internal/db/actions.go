@@ -99,8 +99,8 @@ func (s *ActionsStore) ListRecommendations(filters map[string]string, limit, off
 	if limit <= 0 {
 		limit = 100
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause

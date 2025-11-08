@@ -104,7 +104,7 @@ func (s *Service) CalculatePaybackPeriod(investment, annualReturn float64) float
 // GenerateROIReport creates portfolio view
 func (s *Service) GenerateROIReport(timePeriod string) (*models.ROISummary, error) {
 	// Get all features for period
-	features, _, err := s.store.ListFeatureValues(timePeriod, 1000, 0)
+	features, _, err := s.store.ListFeatureValues(timePeriod, db.MaxQueryLimit, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list features: %w", err)
 	}
@@ -159,7 +159,7 @@ func (s *Service) GenerateROIReport(timePeriod string) (*models.ROISummary, erro
 // CompareFeatureROI ranks features by ROI
 func (s *Service) CompareFeatureROI(timePeriod string) ([]*models.FeatureROIDetails, error) {
 	// Get all features
-	features, _, err := s.store.ListFeatureValues(timePeriod, 1000, 0)
+	features, _, err := s.store.ListFeatureValues(timePeriod, db.MaxQueryLimit, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list features: %w", err)
 	}
@@ -167,9 +167,23 @@ func (s *Service) CompareFeatureROI(timePeriod string) ([]*models.FeatureROIDeta
 	var details []*models.FeatureROIDetails
 
 	for _, feature := range features {
-		cost, _ := s.store.GetFeatureCost(feature.ID)
-		roi, _ := s.store.GetROICalculation(feature.ID)
-		workItems, _ := s.store.GetFeatureWorkItems(feature.ID, 100)
+		cost, err := s.store.GetFeatureCost(feature.ID)
+		if err != nil {
+			// Skip features with database errors, but continue processing others
+			continue
+		}
+
+		roi, err := s.store.GetROICalculation(feature.ID)
+		if err != nil {
+			// Skip features with database errors, but continue processing others
+			continue
+		}
+
+		workItems, err := s.store.GetFeatureWorkItems(feature.ID, 100)
+		if err != nil {
+			// Skip features with database errors, but continue processing others
+			continue
+		}
 
 		detail := &models.FeatureROIDetails{
 			Feature:   feature,
@@ -236,9 +250,20 @@ func (s *Service) GetFeatureROIDetails(featureID string) (*models.FeatureROIDeta
 		return nil, fmt.Errorf("feature not found: %s", featureID)
 	}
 
-	cost, _ := s.store.GetFeatureCost(featureID)
-	roi, _ := s.store.GetROICalculation(featureID)
-	workItems, _ := s.store.GetFeatureWorkItems(featureID, 100)
+	cost, err := s.store.GetFeatureCost(featureID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get feature cost: %w", err)
+	}
+
+	roi, err := s.store.GetROICalculation(featureID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ROI calculation: %w", err)
+	}
+
+	workItems, err := s.store.GetFeatureWorkItems(featureID, 100)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get feature work items: %w", err)
+	}
 
 	return &models.FeatureROIDetails{
 		Feature:   feature,

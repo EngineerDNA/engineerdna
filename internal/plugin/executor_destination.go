@@ -50,9 +50,8 @@ func (e *Executor) ExportToDestination(pluginName string, params sdk.ExportParam
 
 		{
 			// Enforce max event count to prevent unbounded resource usage
-			const maxEvents = 50000
-			if len(eventsList) > maxEvents {
-				return nil, fmt.Errorf("too many events to export: %d (max %d)", len(eventsList), maxEvents)
+			if len(eventsList) > MaxPluginEvents {
+				return nil, fmt.Errorf("too many events to export: %d (max %d)", len(eventsList), MaxPluginEvents)
 			}
 
 			var modelEvents []*models.Event

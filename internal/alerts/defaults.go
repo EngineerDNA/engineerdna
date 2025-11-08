@@ -2,6 +2,7 @@ package alerts
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/engineerdna/engineerdna/internal/db"
@@ -76,11 +77,11 @@ func CreateDefaultAlertRules(alertsStore *db.AlertsStore) error {
 		},
 		{
 			rule: &models.AlertRule{
-				Name:              "Sprint Behind Pace > 30%",
-				Description:       "Alert when sprint is more than 30% behind expected progress",
+				Name:              fmt.Sprintf("Sprint Behind Pace > %.0f%%", DefaultSprintBehindThreshold),
+				Description:       fmt.Sprintf("Alert when sprint is more than %.0f%% behind expected progress", DefaultSprintBehindThreshold),
 				AlertType:         "sprint_behind",
 				Enabled:           true,
-				ThresholdValue:    floatPtr(30.0),
+				ThresholdValue:    floatPtr(DefaultSprintBehindThreshold),
 				ThresholdOperator: ">",
 				Severity:          "warning",
 				TargetEntity:      "org",

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/constants"
 	"github.com/engineerdna/engineerdna/plugins/plugin-sdk"
 )
 
@@ -369,7 +370,7 @@ func (p *AIInsightsPlugin) callAnthropic(systemPrompt, userMessage string) (stri
 
 	// Use custom client with timeout to prevent hanging on slow API
 	client := &http.Client{
-		Timeout: 60 * time.Second,
+		Timeout: constants.LongAPITimeout,
 	}
 	resp, err := client.Do(req)
 	if err != nil {

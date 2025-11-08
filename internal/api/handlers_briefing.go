@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/engineerdna/engineerdna/internal/config"
 )
 
 // Briefing Handlers
@@ -75,7 +77,8 @@ func (s *Server) getWeeklyBriefing(w http.ResponseWriter, r *http.Request, teamI
 	}
 
 	// Get or generate briefing
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultTimeout)
+	defer cancel()
 	briefing, err := s.briefingService.GetWeeklyBriefing(ctx, teamID, weekStart)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get briefing", err)
@@ -147,7 +150,8 @@ func (s *Server) generateWeeklyBriefing(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// Force regenerate briefing
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultTimeout)
+	defer cancel()
 	briefing, err := s.briefingService.GenerateWeeklyBriefing(ctx, teamID, weekStart)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to generate briefing", err)

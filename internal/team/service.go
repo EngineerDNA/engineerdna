@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/models"
 	"github.com/google/uuid"
 )
@@ -173,8 +174,8 @@ func (s *Service) getActiveMembers(teamID string) ([]*models.TeamMembership, err
 		FROM team_membership
 		WHERE team_id = ?
 		  AND left_at IS NULL
-		LIMIT 1000
-	`, teamID)
+		LIMIT ?
+	`, teamID, db.MaxQueryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query team members: %w", err)
 	}
@@ -421,8 +422,8 @@ func (s *Service) getChildTeams(parentTeamID string) ([]*models.Team, error) {
 		FROM teams
 		WHERE parent_team_id = ?
 		ORDER BY name
-		LIMIT 1000
-	`, parentTeamID)
+		LIMIT ?
+	`, parentTeamID, db.MaxQueryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query child teams: %w", err)
 	}

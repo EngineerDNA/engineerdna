@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/models"
 	"github.com/google/uuid"
 )
@@ -209,8 +210,8 @@ func (s *Service) getEngineersWithRoles() ([]*models.Engineer, error) {
 		FROM engineers
 		WHERE active = TRUE
 		  AND role_id IS NOT NULL
-		LIMIT 1000
-	`)
+		LIMIT ?
+	`, db.MaxQueryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query engineers: %w", err)
 	}

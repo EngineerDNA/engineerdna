@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/models"
 )
 
@@ -480,7 +481,7 @@ func (s *Server) handleSprintBurndown(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 
 	// Get all active sprints
-	sprints, err := s.planningStore.ListSprints(1000)
+	sprints, err := s.planningStore.ListSprints(db.MaxQueryLimit)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get sprints", err)
 		return

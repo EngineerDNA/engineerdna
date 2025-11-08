@@ -150,7 +150,7 @@ func (s *BriefingService) fetchTeamEvents(memberIDs []string, start, end time.Ti
 	var allEvents []*models.Event
 
 	for _, memberID := range memberIDs {
-		events, err := s.eventsStore.GetEventsByEngineerAndTimeRange(memberID, start, end, 1000)
+		events, err := s.eventsStore.GetEventsByEngineerAndTimeRange(memberID, start, end, db.MaxQueryLimit)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get events for engineer %s: %w", memberID, err)
 		}
@@ -360,10 +360,6 @@ func (s *BriefingService) callAIPlugin(ctx context.Context, prompt string) (*mod
 		TalkingPoints: "Team shipped 15 PRs this week maintaining steady velocity. " +
 			"Main focus: reducing review queue to keep momentum.",
 	}
-
-	// Avoid unused variable warnings
-	_ = ctx
-	_ = prompt
 
 	return mockResponse, nil
 }

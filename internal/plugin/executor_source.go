@@ -28,6 +28,11 @@ func (e *Executor) SyncSourcePlugin(pluginName string, since time.Time) ([]*mode
 		return nil, fmt.Errorf("failed to get plugin info: %w", err)
 	}
 
+	// Register event types from plugin manifest
+	if err := e.RegisterEventTypesFromPlugin(pluginName, info); err != nil {
+		return nil, fmt.Errorf("failed to register event types: %w", err)
+	}
+
 	// Decrypt config
 	var secretFields []string
 	for _, field := range info.ConfigFields {
@@ -65,9 +70,8 @@ func (e *Executor) SyncSourcePlugin(pluginName string, since time.Time) ([]*mode
 	}
 
 	// Enforce maximum event count to prevent memory exhaustion
-	const maxEvents = 50000
-	if len(result.Events) > maxEvents {
-		return nil, fmt.Errorf("too many events returned: %d (max %d)", len(result.Events), maxEvents)
+	if len(result.Events) > MaxPluginEvents {
+		return nil, fmt.Errorf("too many events returned: %d (max %d)", len(result.Events), MaxPluginEvents)
 	}
 
 	// Convert SDK events to internal events

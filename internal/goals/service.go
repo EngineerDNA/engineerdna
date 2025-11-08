@@ -206,7 +206,7 @@ func (s *Service) fetchMetricValue(metricName, ownerID, ownerType string) (float
 // CompleteMilestone marks a milestone as complete
 func (s *Service) CompleteMilestone(milestoneID string) error {
 	// Get milestone to get goal_id
-	milestones, _, err := s.store.GetMilestones("", 1000, 0)
+	milestones, _, err := s.store.GetMilestones("", db.MaxQueryLimit, 0)
 	if err != nil {
 		return fmt.Errorf("failed to get milestones: %w", err)
 	}

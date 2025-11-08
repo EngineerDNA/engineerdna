@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/models"
 )
 
@@ -30,7 +31,7 @@ func (s *Server) listPlugins(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get configured plugins from database
-	configuredPlugins, err := s.pluginStore.List(1000)
+	configuredPlugins, err := s.pluginStore.List(db.MaxQueryLimit)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to list configured plugins", err)
 		return

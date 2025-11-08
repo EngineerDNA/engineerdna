@@ -167,7 +167,7 @@ func (e *Evaluator) EvaluateScoreDrop(rule *models.AlertRule) error {
 		engineerIDs = []string{rule.TargetID}
 	} else {
 		// Check all engineers
-		rows, err := e.database.Query("SELECT id FROM engineers WHERE active = true LIMIT 1000")
+		rows, err := e.database.Query("SELECT id FROM engineers WHERE active = true LIMIT ?", db.MaxQueryLimit)
 		if err != nil {
 			return fmt.Errorf("failed to query engineers: %w", err)
 		}
@@ -262,7 +262,7 @@ func (e *Evaluator) EvaluateBurnoutSignals(rule *models.AlertRule) error {
 	if rule.TargetEntity == "engineer" && rule.TargetID != "" {
 		engineerIDs = []string{rule.TargetID}
 	} else {
-		rows, err := e.database.Query("SELECT id FROM engineers WHERE active = true LIMIT 1000")
+		rows, err := e.database.Query("SELECT id FROM engineers WHERE active = true LIMIT ?", db.MaxQueryLimit)
 		if err != nil {
 			return fmt.Errorf("failed to query engineers: %w", err)
 		}

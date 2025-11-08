@@ -81,7 +81,7 @@ func (s *ContextStore) ListManagerNotes(managerID, subjectType, subjectID string
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause
@@ -229,7 +229,7 @@ func (s *ContextStore) GetContextAnnotations(entityType, entityID string, limit,
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total matching records
@@ -381,7 +381,7 @@ func (s *ContextStore) ListActiveSurveys(limit, offset int) ([]*models.Sentiment
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total matching records

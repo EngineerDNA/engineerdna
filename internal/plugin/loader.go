@@ -127,6 +127,25 @@ func (l *Loader) loadPluginEntry(pluginDir, name string) (*PluginEntry, error) {
 		return nil, fmt.Errorf("failed to parse plugin.json: %w", err)
 	}
 
+	// Validate plugin type
+	validTypes := []models.PluginType{
+		models.PluginTypeSource,
+		models.PluginTypeDestination,
+		models.PluginTypeProcessor,
+		models.PluginTypeMetricSource,
+		models.PluginTypeAttributeSource,
+	}
+	found := false
+	for _, validType := range validTypes {
+		if metadata.Type == validType {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("invalid plugin type: %s (must be source, destination, processor, metric_source, or attribute_source)", metadata.Type)
+	}
+
 	// Find executable
 	execPath, err := l.GetPluginPath(name)
 	if err != nil {

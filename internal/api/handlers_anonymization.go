@@ -3,13 +3,15 @@ package api
 import (
 	"net/http"
 	"strconv"
+
+	"github.com/engineerdna/engineerdna/internal/db"
 )
 
 // handleAnonymizationPolicies retrieves anonymization policies
 func (s *Server) handleAnonymizationPolicies(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		policies, err := s.anonStore.ListPolicies(1000)
+		policies, err := s.anonStore.ListPolicies(db.MaxQueryLimit)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to list policies", err)
 			return
@@ -24,7 +26,7 @@ func (s *Server) handleAnonymizationPolicies(w http.ResponseWriter, r *http.Requ
 func (s *Server) handleAnonymizationMappings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		mappings, err := s.anonStore.ListMappings(1000)
+		mappings, err := s.anonStore.ListMappings(db.MaxQueryLimit)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to list mappings", err)
 			return

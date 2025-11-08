@@ -16,16 +16,22 @@ Shared database layer using raw SQL with SQLite.
 
 ```
 internal/db/
-├── anonymization.go    # Anonymization mapping store
-├── audit.go            # Audit log store
-├── events.go           # Event store (core)
-├── migrations.go       # Inline migrations
-└── plugins.go          # Plugin config store
+├── anonymization.go       # Anonymization mapping store
+├── attributes.go          # Entity attribute store (PDR-9)
+├── audit.go               # Audit log store
+├── correlations.go        # Correlation store (PDR-9)
+├── events.go              # Event store (core)
+├── metrics.go             # Metric value store (PDR-9)
+├── migrations.go          # Inline migrations
+├── plugin_manifests.go    # Plugin manifest store (PDR-9)
+└── plugins.go             # Plugin config store
 
 migrations/             # Reference SQL files (for VCS)
 ├── 001_initial_schema.sql
 ├── 002_anonymization.sql
-└── 003_audit_log.sql
+├── 003_audit_log.sql
+...
+└── 028_multi_modal_data.sql  # PDR-9: Metrics, Attributes, Correlations
 ```
 
 ## Critical Rules
@@ -189,6 +195,98 @@ event.Timestamp = time.Now() // Wrong! Local timezone
 ```
 
 **Storage**: TEXT in RFC3339 format (`"2025-11-04T10:30:00Z"`)
+
+### Multi-Modal Data (PDR-9)
+
+EngineerDNA supports three data types:
+
+**Events** - Discrete timestamped actions
+```sql
+CREATE TABLE events (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,              -- Source type (e.g., pull_request)
+    normalized_type TEXT,             -- Normalized type (e.g., code_review)
+    normalized_data TEXT,             -- Normalized fields as JSON
+    source TEXT NOT NULL,
+    timestamp DATETIME NOT NULL,
+    actor TEXT NOT NULL,
+    data TEXT NOT NULL,               -- Source-specific data as JSON
+    ...
+);
+CREATE INDEX idx_events_normalized_type ON events(normalized_type);
+```
+
+**Metrics** - Time-series measurements
+```sql
+CREATE TABLE metric_values (
+    id TEXT PRIMARY KEY,
+    metric_name TEXT NOT NULL,       -- aws_cost, team_velocity, deploy_frequency
+    source TEXT NOT NULL,             -- Plugin that created metric
+    timestamp TEXT NOT NULL,          -- ISO 8601
+    granularity TEXT NOT NULL,        -- hourly, daily, weekly, monthly
+    value REAL NOT NULL,
+    unit TEXT,                        -- dollars, hours, count, percentage
+    dimensions TEXT,                  -- JSON: {service: ec2, region: us-east-1}
+    created_at TEXT NOT NULL
+);
+CREATE INDEX idx_metric_values_name_timestamp ON metric_values(metric_name, timestamp);
+```
+
+**Attributes** - Facts about entities
+```sql
+CREATE TABLE entity_attributes (
+    id TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,        -- team, engineer, org
+    entity_id TEXT NOT NULL,
+    attribute_name TEXT NOT NULL,     -- team_size, budget, location
+    value TEXT NOT NULL,
+    value_type TEXT NOT NULL,         -- string, number, boolean, json
+    valid_from TEXT NOT NULL,         -- When this became valid
+    valid_until TEXT,                 -- NULL = still valid
+    source TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(entity_type, entity_id, attribute_name, valid_from)
+);
+CREATE INDEX idx_entity_attributes_lookup ON entity_attributes(entity_type, entity_id, attribute_name);
+```
+
+**Correlations** - Cross-data-type relationships
+```sql
+CREATE TABLE correlations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,       -- cost_per_feature, velocity_vs_team_size
+    plugin TEXT NOT NULL,
+    definition TEXT NOT NULL,         -- JSON: How to compute
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE correlation_values (
+    id TEXT PRIMARY KEY,
+    correlation_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    time_window TEXT NOT NULL,        -- day, week, month, quarter
+    value REAL NOT NULL,
+    breakdown TEXT,                   -- JSON: Breakdown by dimension
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (correlation_id) REFERENCES correlations(id)
+);
+```
+
+**Plugin Manifests** - Capability registry
+```sql
+CREATE TABLE plugin_manifests (
+    plugin_name TEXT PRIMARY KEY,
+    version TEXT NOT NULL,
+    type TEXT NOT NULL,               -- source, metric_source, attribute_source, destination, processor
+    capabilities TEXT,                -- JSON array
+    provides_metrics TEXT,            -- JSON: MetricSpec[]
+    provides_event_types TEXT,        -- JSON: EventTypeSpec[]
+    provides_widgets TEXT,            -- JSON: WidgetSpec[]
+    provides_correlations TEXT,       -- JSON: CorrelationSpec[]
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+```
 
 ## Common Gotchas
 

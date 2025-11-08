@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/config"
 	"github.com/engineerdna/engineerdna/plugins/plugin-sdk"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
@@ -125,7 +126,7 @@ func (p *GoogleSheetsPlugin) Health() sdk.HealthResult {
 	}
 
 	// Try to read the spreadsheet to verify access (with timeout)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.PluginTimeout)
 	defer cancel()
 	spreadsheet, err := p.service.Spreadsheets.Get(p.spreadsheetID).Context(ctx).Do()
 	if err != nil {
@@ -149,7 +150,7 @@ func (p *GoogleSheetsPlugin) Test() sdk.TestResult {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.PluginTimeout)
 	defer cancel()
 	spreadsheet, err := p.service.Spreadsheets.Get(p.spreadsheetID).Context(ctx).Do()
 	if err != nil {

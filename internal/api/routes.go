@@ -28,6 +28,8 @@ func (s *Server) SetupRoutes() {
 	s.mux.HandleFunc("/api/metrics/throughput", s.handleMetricsThroughput)
 	s.mux.HandleFunc("/api/metrics/cycle-time", s.handleMetricsCycleTime)
 	s.mux.HandleFunc("/api/metrics/today", s.handleMetricsToday)
+	s.mux.HandleFunc("/api/metrics/values", s.handleMetricValues)
+	s.mux.HandleFunc("/api/metrics/calculate", s.handleMetricCalculate)
 
 	// Activity
 	s.mux.HandleFunc("/api/activity/today", s.handleActivityToday)
@@ -181,6 +183,17 @@ func (s *Server) SetupRoutes() {
 	s.mux.HandleFunc("/api/actions/effectiveness-report", s.handleEffectivenessReport)
 	s.mux.HandleFunc("/api/follow-ups", s.handleFollowUps)
 	s.mux.HandleFunc("/api/follow-ups/", s.handleFollowUpByID)
+
+	// Attributes (multi-modal data)
+	s.mux.HandleFunc("/api/attributes", s.handleAttributes)
+
+	// Correlations (multi-modal data)
+	s.mux.HandleFunc("/api/correlations", s.handleCorrelations)
+	s.mux.HandleFunc("/api/correlations/", s.handleCorrelationByName)
+
+	// Widget Registry
+	s.mux.HandleFunc("/api/widgets/registry", s.handleWidgetRegistry)
+	s.mux.HandleFunc("/api/widgets/registry/", s.handleWidgetByID)
 
 	// Dashboards
 	s.mux.HandleFunc("/api/dashboards", s.handleDashboards)

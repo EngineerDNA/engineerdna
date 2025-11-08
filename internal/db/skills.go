@@ -89,7 +89,7 @@ func (s *SkillsStore) ListSkills(category string, limit, offset int) ([]*models.
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause
@@ -223,7 +223,7 @@ func (s *SkillsStore) ListEngineerSkills(engineerID string, limit, offset int) (
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total engineer skills
@@ -338,7 +338,7 @@ func (s *SkillsStore) ListSkillEvidence(engineerID, skillID string, limit, offse
 		limit = 50
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total evidence
@@ -397,7 +397,7 @@ func (s *SkillsStore) GetAllSkillEvidence(engineerID string, since time.Time, li
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	rows, err := s.db.Query(`
@@ -474,7 +474,7 @@ func (s *SkillsStore) GetSkillProgression(engineerID, skillID string, limit, off
 		limit = 20
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total progression records

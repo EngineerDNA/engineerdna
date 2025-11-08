@@ -1,9 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/engineerdna/engineerdna/internal/db"
+	"github.com/engineerdna/engineerdna/internal/models"
+	"github.com/engineerdna/engineerdna/internal/services"
 )
 
 // handleMetricsThroughput calculates and returns throughput metrics
@@ -144,4 +149,184 @@ func (s *Server) handleMetricsToday(w http.ResponseWriter, r *http.Request) {
 		"active_alerts":         activeAlerts,
 		"sprint_progress":       sprintProgress,
 	})
+}
+
+// handleMetricValues handles GET and POST for metric values
+func (s *Server) handleMetricValues(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleMetricValuesGet(w, r)
+	case http.MethodPost:
+		s.handleMetricValuesPost(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// handleMetricValuesGet queries metric values with filters
+// Query params: metric_name, source, since, until, granularity, limit, offset
+func (s *Server) handleMetricValuesGet(w http.ResponseWriter, r *http.Request) {
+	// Parse query parameters
+	filters := make(map[string]interface{})
+
+	if metricName := r.URL.Query().Get("metric_name"); metricName != "" {
+		filters["metric_name"] = metricName
+	}
+
+	if source := r.URL.Query().Get("source"); source != "" {
+		filters["source"] = source
+	}
+
+	if granularity := r.URL.Query().Get("granularity"); granularity != "" {
+		filters["granularity"] = granularity
+	}
+
+	// Parse time range
+	if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
+		since, err := time.Parse(time.RFC3339, sinceStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid since timestamp", err)
+			return
+		}
+		filters["since"] = since
+	}
+
+	if untilStr := r.URL.Query().Get("until"); untilStr != "" {
+		until, err := time.Parse(time.RFC3339, untilStr)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid until timestamp", err)
+			return
+		}
+		filters["until"] = until
+	}
+
+	// Parse pagination
+	limit, err := parseLimitParam(r)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid limit parameter", err)
+		return
+	}
+	if limit == 0 {
+		limit = db.DefaultQueryLimit
+	}
+	if limit > db.MaxQueryLimit {
+		limit = db.MaxQueryLimit
+	}
+
+	offset, err := parseOffsetParam(r)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid offset parameter", err)
+		return
+	}
+
+	// Query metrics
+	metrics, err := s.metricStore.List(filters, limit, offset)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query metrics", err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"metrics": metrics,
+		"count":   len(metrics),
+		"limit":   limit,
+		"offset":  offset,
+	})
+}
+
+// handleMetricValuesPost creates a new metric value (for metric_source plugins)
+func (s *Server) handleMetricValuesPost(w http.ResponseWriter, r *http.Request) {
+	var metric models.MetricValue
+	if err := json.NewDecoder(r.Body).Decode(&metric); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Validate required fields
+	if metric.MetricName == "" {
+		respondError(w, http.StatusBadRequest, "metric_name is required", nil)
+		return
+	}
+
+	// Validate metric name for security
+	if err := services.ValidateMetricName(metric.MetricName); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid metric name", err)
+		return
+	}
+
+	if metric.Source == "" {
+		respondError(w, http.StatusBadRequest, "source is required", nil)
+		return
+	}
+	if metric.Granularity == "" {
+		respondError(w, http.StatusBadRequest, "granularity is required", nil)
+		return
+	}
+
+	// Set timestamp to now if not provided
+	if metric.Timestamp.IsZero() {
+		metric.Timestamp = time.Now().UTC()
+	}
+
+	// Validate granularity
+	validGranularities := map[string]bool{
+		"hourly":  true,
+		"daily":   true,
+		"weekly":  true,
+		"monthly": true,
+	}
+	if !validGranularities[metric.Granularity] {
+		respondError(w, http.StatusBadRequest, "invalid granularity (must be: hourly, daily, weekly, monthly)", nil)
+		return
+	}
+
+	// Create metric
+	if err := s.metricStore.Create(&metric); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to create metric", err)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, metric)
+}
+
+// handleMetricCalculate calculates a metric on-demand using the metric engine
+// POST /api/metrics/calculate
+// Body: { "definition": {...}, "params": {...} }
+func (s *Server) handleMetricCalculate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Definition json.RawMessage    `json:"definition"`
+		Params     map[string]interface{} `json:"params"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Parse metric definition
+	definition, err := services.ParseMetricDefinition(req.Definition)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid metric definition", err)
+		return
+	}
+
+	// Check if metric engine is available
+	if s.metricEngine == nil {
+		respondError(w, http.StatusInternalServerError, "Metric engine not available", nil)
+		return
+	}
+
+	// Calculate metric
+	result, err := s.metricEngine.Calculate(definition, req.Params)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to calculate metric", err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, result)
 }

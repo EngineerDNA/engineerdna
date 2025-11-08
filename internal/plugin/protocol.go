@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/config"
 	apperrors "github.com/engineerdna/engineerdna/internal/errors"
 	"github.com/engineerdna/engineerdna/plugins/plugin-sdk"
 	"github.com/google/uuid"
@@ -70,8 +72,9 @@ func NewClient(pluginPath string) (*Client, error) {
 
 		// Use MultiWriter to both forward to os.Stderr and capture in buffer
 		multiWriter := io.MultiWriter(os.Stderr, stderrBuf)
-		written, _ := io.Copy(multiWriter, limitedStderr)
-		if written >= maxStderrBytes {
+		if written, err := io.Copy(multiWriter, limitedStderr); err != nil {
+			log.Printf("Error copying plugin stderr: %v", err)
+		} else if written >= maxStderrBytes {
 			fmt.Fprintf(os.Stderr, "\n[plugin stderr limit exceeded, truncating...]\n")
 		}
 	}()
@@ -143,10 +146,10 @@ func (c *Client) Call(method string, params interface{}) (interface{}, error) {
 			return nil, apperrors.NewPluginCrashError(c.pluginName, c.stderrBuf.String())
 		}
 		return nil, apperrors.NewInternalError("plugin communication", err)
-	case <-time.After(30 * time.Second):
+	case <-time.After(config.PluginTimeout):
 		// Kill the plugin process on timeout
 		killProcessGroup(c.cmd)
-		return nil, apperrors.NewTimeoutError("plugin call", 30*time.Second)
+		return nil, apperrors.NewTimeoutError("plugin call", config.PluginTimeout)
 	}
 
 	var response sdk.Response

@@ -77,7 +77,7 @@ func (s *ScoringStore) ListRoles(limit int) ([]*models.Role, error) {
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	rows, err := s.db.Query(`
@@ -220,7 +220,7 @@ func (s *ScoringStore) GetPerformanceScores(engineerID string, startDate, endDat
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	query := `

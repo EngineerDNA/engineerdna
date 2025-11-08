@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/config"
 	"github.com/engineerdna/engineerdna/internal/models"
 	"github.com/google/uuid"
 )
@@ -150,7 +151,8 @@ func (s *AnonymizationStore) CountMappings() (int, error) {
 // CreateMappingAtomic creates a mapping with atomic count for sequential ID generation
 func (s *AnonymizationStore) CreateMappingAtomic(mapping *models.AnonymizationMapping, strategy models.AnonymizationStrategy) error {
 	// Get dedicated connection from pool to ensure all operations use same connection
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultTimeout)
+	defer cancel()
 	conn, err := s.db.Conn(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get connection: %w", err)

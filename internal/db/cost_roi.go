@@ -142,10 +142,10 @@ func (s *CostROIStore) GetCurrentCostForEntity(entityType, entityID string) (*mo
 func (s *CostROIStore) ListCostConfigurations(entityType string, limit, offset int) ([]*models.CostConfiguration, int, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause
@@ -296,10 +296,10 @@ func (s *CostROIStore) GetFeatureValue(id string) (*models.FeatureValue, error) 
 func (s *CostROIStore) ListFeatureValues(timePeriod string, limit, offset int) ([]*models.FeatureValue, int, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause
@@ -439,10 +439,10 @@ func (s *CostROIStore) CreateFeatureWorkItem(item *models.FeatureWorkItem) error
 func (s *CostROIStore) GetFeatureWorkItems(featureID string, limit int) ([]*models.FeatureWorkItem, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	rows, err := s.db.Query(`
@@ -633,10 +633,10 @@ func (s *CostROIStore) GetROICalculation(featureID string) (*models.ROICalculati
 func (s *CostROIStore) ListROICalculations(limit int) ([]*models.ROICalculation, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	rows, err := s.db.Query(`
@@ -719,10 +719,10 @@ func (s *CostROIStore) CreateEngineeringInvestment(inv *models.EngineeringInvest
 func (s *CostROIStore) GetEngineeringInvestment(timePeriod string, teamID *string, limit int) ([]*models.EngineeringInvestment, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	query := `
@@ -803,10 +803,10 @@ func (s *CostROIStore) CreateCostEfficiencyMetric(metric *models.CostEfficiencyM
 func (s *CostROIStore) GetCostEfficiencyMetrics(timePeriod, entityType string, entityID *string, limit int) ([]*models.CostEfficiencyMetric, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	query := `

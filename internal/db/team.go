@@ -74,7 +74,7 @@ func (s *TeamStore) ListTeams(limit int) ([]*models.Team, error) {
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	rows, err := s.db.Query(`

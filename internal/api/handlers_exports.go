@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/engineerdna/engineerdna/internal/db"
 	sdk "github.com/engineerdna/engineerdna/plugins/plugin-sdk"
 )
 
@@ -26,7 +27,7 @@ func (s *Server) listExports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if limit == 0 {
-		limit = 100 // Default limit
+		limit = db.DefaultQueryLimit
 	}
 
 	offset, err := parseOffsetParam(r)

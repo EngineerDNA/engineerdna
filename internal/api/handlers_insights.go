@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"time"
+
+	"github.com/engineerdna/engineerdna/internal/db"
 )
 
 // handleInsights routes insight-related requests
@@ -42,7 +44,7 @@ func (s *Server) generateInsights(w http.ResponseWriter, r *http.Request) {
 	filters := map[string]interface{}{
 		"since": req.PeriodStart,
 	}
-	events, err := s.eventStore.List(filters, 1000, 0)
+	events, err := s.eventStore.List(filters, db.MaxQueryLimit, 0)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get events", err)
 		return

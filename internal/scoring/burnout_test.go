@@ -232,7 +232,9 @@ func TestDetectBurnoutRisks(t *testing.T) {
 			}
 
 			// Clean up for next test
-			_, _ = db.Exec("DELETE FROM events WHERE engineer_id = ?", tt.engineerID)
+			if _, err := db.Exec("DELETE FROM events WHERE engineer_id = ?", tt.engineerID); err != nil {
+				t.Logf("Warning: Failed to cleanup test data: %v", err)
+			}
 		})
 	}
 }

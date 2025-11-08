@@ -44,16 +44,26 @@ type Event struct {
 
 // PluginInfo contains metadata about the plugin
 type PluginInfo struct {
-	Name          string            `json:"name"`
-	Version       string            `json:"version"`
-	Type          string            `json:"type"` // source, destination, processor
-	Description   string            `json:"description"`
-	Author        string            `json:"author"`
-	ConfigFields  []ConfigField     `json:"config_fields"`
-	Anonymization AnonymizationSpec `json:"anonymization"`
-	OAuth         *OAuthSpec        `json:"oauth,omitempty"`
-	Schedule      *ScheduleSpec     `json:"schedule,omitempty"`
-	Capabilities  []string          `json:"capabilities,omitempty"`
+	Name               string            `json:"name"`
+	Version            string            `json:"version"`
+	Type               string            `json:"type"` // source, destination, processor
+	Description        string            `json:"description"`
+	Author             string            `json:"author"`
+	ConfigFields       []ConfigField     `json:"config_fields"`
+	Anonymization      AnonymizationSpec `json:"anonymization"`
+	OAuth              *OAuthSpec        `json:"oauth,omitempty"`
+	Schedule           *ScheduleSpec     `json:"schedule,omitempty"`
+	Capabilities       []string          `json:"capabilities,omitempty"`
+	ProvidesEventTypes []EventTypeSpec   `json:"provides_event_types,omitempty"`
+}
+
+// EventTypeSpec describes an event type that a plugin can produce
+type EventTypeSpec struct {
+	Type             string            `json:"type"`                        // Source event type (e.g., "pull_request")
+	Description      string            `json:"description"`                 // Human-readable description
+	Schema           string            `json:"schema"`                      // JSON schema for field definitions
+	NormalizedType   string            `json:"normalized_type,omitempty"`   // Normalized type (e.g., "code_review")
+	NormalizationMap map[string]string `json:"normalization_map,omitempty"` // Mapping from normalized fields to source fields
 }
 
 // ConfigField describes a configuration field required by the plugin

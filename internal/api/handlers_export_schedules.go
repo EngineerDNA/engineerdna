@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/models"
 	"github.com/engineerdna/engineerdna/internal/scheduler"
 	"github.com/google/uuid"
@@ -80,7 +81,7 @@ func (s *Server) handleExportScheduleRun(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) listExportSchedules(w http.ResponseWriter, r *http.Request) {
-	schedules, err := s.scheduleStore.List(1000)
+	schedules, err := s.scheduleStore.List(db.MaxQueryLimit)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to list export schedules", err)
 		return

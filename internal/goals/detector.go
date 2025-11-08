@@ -93,8 +93,8 @@ func (d *Detector) processEventForGoal(event *models.Event, goal *models.Goal) e
 
 // detectPullRequestProgress detects progress from PR events
 func (d *Detector) detectPullRequestProgress(event *models.Event, goal *models.Goal, milestones []*models.GoalMilestone) error {
-	action, _ := event.Data["action"].(string)
-	if action != "merged" && action != "closed" {
+	action, ok := event.Data["action"].(string)
+	if !ok || (action != "merged" && action != "closed") {
 		return nil // Only count merged/closed PRs
 	}
 
@@ -115,8 +115,8 @@ func (d *Detector) detectPullRequestProgress(event *models.Event, goal *models.G
 
 // detectReviewProgress detects progress from code review events
 func (d *Detector) detectReviewProgress(event *models.Event, goal *models.Goal, milestones []*models.GoalMilestone) error {
-	state, _ := event.Data["state"].(string)
-	if state != "approved" && state != "changes_requested" {
+	state, ok := event.Data["state"].(string)
+	if !ok || (state != "approved" && state != "changes_requested") {
 		return nil // Only count completed reviews
 	}
 
@@ -130,13 +130,16 @@ func (d *Detector) detectReviewProgress(event *models.Event, goal *models.Goal, 
 
 // detectIssueProgress detects progress from issue events
 func (d *Detector) detectIssueProgress(event *models.Event, goal *models.Goal, milestones []*models.GoalMilestone) error {
-	action, _ := event.Data["action"].(string)
-	if action != "closed" {
+	action, ok := event.Data["action"].(string)
+	if !ok || action != "closed" {
 		return nil
 	}
 
 	// Check if it's a bug
-	labels, _ := event.Data["labels"].([]interface{})
+	labels, ok := event.Data["labels"].([]interface{})
+	if !ok {
+		return nil
+	}
 	isBug := false
 	for _, label := range labels {
 		if labelStr, ok := label.(string); ok && strings.ToLower(labelStr) == "bug" {
@@ -161,21 +164,30 @@ func (d *Detector) isComplexFeature(eventData map[string]interface{}) bool {
 	// 2. Touches 3+ files or services
 	// 3. Has design doc or RFC link
 
-	additions, _ := eventData["additions"].(float64)
-	deletions, _ := eventData["deletions"].(float64)
+	additions, ok := eventData["additions"].(float64)
+	if !ok {
+		return false
+	}
+	deletions, ok := eventData["deletions"].(float64)
+	if !ok {
+		return false
+	}
 	totalLines := additions + deletions
 
 	if totalLines < 500 {
 		return false
 	}
 
-	filesChanged, _ := eventData["files_changed"].(float64)
-	if filesChanged < 3 {
+	filesChanged, ok := eventData["files_changed"].(float64)
+	if !ok || filesChanged < 3 {
 		return false
 	}
 
 	// Check for design doc reference in PR body
-	body, _ := eventData["body"].(string)
+	body, ok := eventData["body"].(string)
+	if !ok {
+		return false
+	}
 	hasDesignDoc := strings.Contains(strings.ToLower(body), "design doc") ||
 		strings.Contains(strings.ToLower(body), "rfc") ||
 		strings.Contains(strings.ToLower(body), "technical design")
@@ -260,7 +272,10 @@ func (d *Detector) DetectMentoringProgress(engineerID string, pairingSessionCoun
 // DetectSystemDesignGrowth detects system design work
 func (d *Detector) DetectSystemDesignGrowth(event *models.Event) error {
 	// Count services touched
-	filesList, _ := event.Data["files"].([]interface{})
+	filesList, ok := event.Data["files"].([]interface{})
+	if !ok {
+		return nil
+	}
 	servicesSet := make(map[string]bool)
 
 	for _, file := range filesList {
@@ -275,7 +290,10 @@ func (d *Detector) DetectSystemDesignGrowth(event *models.Event) error {
 
 	if len(servicesSet) >= 3 {
 		// This PR touches multiple services - system design work
-		author, _ := event.Data["author"].(string)
+		author, ok := event.Data["author"].(string)
+		if !ok {
+			return nil
+		}
 		goals, _, err := d.store.ListGoals("engineer", author, "active", "", 0, 0)
 		if err != nil {
 			return err

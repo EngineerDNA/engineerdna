@@ -41,12 +41,12 @@ func (s *SettingsStore) GetSettings() (*models.Settings, error) {
 		return nil, fmt.Errorf("failed to get settings: %w", err)
 	}
 
-	// Parse timestamps
-	settings.CreatedAt, err = time.Parse(time.RFC3339, createdAtStr)
+	// Parse timestamps from SQLite DATETIME format
+	settings.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse created_at: %w", err)
 	}
-	settings.UpdatedAt, err = time.Parse(time.RFC3339, updatedAtStr)
+	settings.UpdatedAt, err = time.Parse("2006-01-02 15:04:05", updatedAtStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse updated_at: %w", err)
 	}

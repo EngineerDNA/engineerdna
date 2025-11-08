@@ -32,7 +32,7 @@ func (a *Analyzer) AnalyzeCodeReviewTone(engineerID, timePeriod string) (*models
 		"end_date":    endDate,
 	}
 
-	events, err := a.eventStore.List(filters, 1000, 0)
+	events, err := a.eventStore.List(filters, db.MaxQueryLimit, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (a *Analyzer) AnalyzeCommitMessages(engineerID, timePeriod string) (*models
 		"end_date":    endDate,
 	}
 
-	events, err := a.eventStore.List(filters, 1000, 0)
+	events, err := a.eventStore.List(filters, db.MaxQueryLimit, 0)
 	if err != nil {
 		return nil, err
 	}

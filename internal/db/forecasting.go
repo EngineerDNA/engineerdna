@@ -97,10 +97,10 @@ func (s *ForecastingStore) GetForecast(id string) (*models.Forecast, error) {
 func (s *ForecastingStore) ListForecasts(entityType, entityID, forecastType string, includeExpired bool, limit, offset int) ([]*models.Forecast, int, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause
@@ -239,10 +239,10 @@ func (s *ForecastingStore) GetScenario(id string) (*models.Scenario, error) {
 func (s *ForecastingStore) ListScenarios(entityType, entityID string, limit, offset int) ([]*models.Scenario, int, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause
@@ -333,10 +333,10 @@ func (s *ForecastingStore) CreateScenarioResult(result *models.ScenarioResult) e
 func (s *ForecastingStore) GetScenarioResults(scenarioID string, limit int) ([]*models.ScenarioResult, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	rows, err := s.db.Query(`
@@ -409,10 +409,10 @@ func (s *ForecastingStore) CreateRiskPrediction(risk *models.RiskPrediction) err
 func (s *ForecastingStore) ListRiskPredictions(entityType, entityID, riskType string, limit, offset int) ([]*models.RiskPrediction, int, error) {
 	// Apply default and max limits for pagination
 	if limit <= 0 {
-		limit = 100
+		limit = DefaultQueryLimit
 	}
-	if limit > 1000 {
-		limit = 1000
+	if limit > MaxQueryLimit {
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause

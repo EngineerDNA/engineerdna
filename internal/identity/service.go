@@ -472,8 +472,7 @@ func extractEmailUsername(email string) string {
 // levenshteinDistance computes the Levenshtein distance between two strings
 func levenshteinDistance(s1, s2 string) int {
 	// Prevent memory exhaustion DoS by limiting string length
-	const maxLength = 100
-	if len(s1) > maxLength || len(s2) > maxLength {
+	if len(s1) > MaxValidationLength || len(s2) > MaxValidationLength {
 		return 999 // Return large distance to indicate no match
 	}
 

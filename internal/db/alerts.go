@@ -89,7 +89,7 @@ func (s *AlertsStore) ListAlertRules(enabledOnly bool, limit, offset int) ([]*mo
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total matching records
@@ -410,7 +410,7 @@ func (s *AlertsStore) ListAlertInstances(filters map[string]string, limit, offse
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause for both count and data queries

@@ -94,7 +94,11 @@ func (s *Service) Deanonymize(anonID string) (string, error) {
 func (s *Service) generateAnonymizedID(realIdentifier string, strategy models.AnonymizationStrategy) string {
 	switch strategy {
 	case models.StrategySequential:
-		count, _ := s.store.CountMappings()
+		count, err := s.store.CountMappings()
+		if err != nil {
+			// If count fails, fall back to timestamp-based ID to avoid duplicates
+			return fmt.Sprintf("Engineer_%d", time.Now().UTC().Unix())
+		}
 		if count < 26 {
 			return fmt.Sprintf("Engineer_%c", 'A'+count)
 		}

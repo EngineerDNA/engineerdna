@@ -268,3 +268,270 @@ func (s *DashboardStore) CloneDashboard(sourceID string, newName string) (*model
 
 	return clone, nil
 }
+
+// Metric Computation Methods
+
+// TeamMetrics holds aggregated metrics for a team
+type TeamMetrics struct {
+	TeamID     string
+	TeamScore  float64
+	PRCount    float64
+	AlertCount float64
+}
+
+// EngineerMetrics holds aggregated metrics for an engineer
+type EngineerMetrics struct {
+	EngineerID    string
+	EngineerScore float64
+	PRCount       float64
+}
+
+// CountPRsByDate counts pull requests for a specific date
+func (s *DashboardStore) CountPRsByDate(date string) (int, error) {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(*) FROM events
+		WHERE type = 'pull_request'
+		  AND DATE(timestamp) = ?
+	`, date).Scan(&count)
+
+	if err != nil && err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to count PRs by date: %w", err)
+	}
+
+	return count, nil
+}
+
+// CountActiveAlerts counts unresolved alerts in a date range
+func (s *DashboardStore) CountActiveAlerts(start, end string) (int, error) {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(*) FROM alert_instances
+		WHERE fired_at >= ? AND fired_at < ?
+		  AND resolved_at IS NULL
+	`, start, end).Scan(&count)
+
+	if err != nil && err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to count active alerts: %w", err)
+	}
+
+	return count, nil
+}
+
+// CountActiveGoals counts goals with active status
+func (s *DashboardStore) CountActiveGoals() (int, error) {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(*) FROM goals
+		WHERE status = 'active'
+	`).Scan(&count)
+
+	if err != nil && err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to count active goals: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetTeamMetricsForDate retrieves aggregated metrics for all teams on a specific date
+func (s *DashboardStore) GetTeamMetricsForDate(periodStart, periodEnd string) ([]TeamMetrics, error) {
+	query := `
+		SELECT
+			t.id,
+			COALESCE(tps.total_score, 0) as team_score,
+			COUNT(DISTINCT CASE WHEN e.type = 'pull_request' AND DATE(e.timestamp) = ? THEN e.id END) as pr_count,
+			COUNT(DISTINCT CASE WHEN ai.fired_at >= ? AND ai.fired_at < ? AND ai.resolved_at IS NULL THEN ai.id END) as alert_count
+		FROM teams t
+		LEFT JOIN (
+			SELECT team_id, total_score, created_at,
+				ROW_NUMBER() OVER (PARTITION BY team_id ORDER BY created_at DESC) as rn
+			FROM team_performance_scores
+		) tps ON t.id = tps.team_id AND tps.rn = 1
+		LEFT JOIN team_membership tm ON t.id = tm.team_id AND tm.left_at IS NULL
+		LEFT JOIN engineers eng ON tm.member_id = eng.id
+		LEFT JOIN events e ON eng.email = e.actor
+		LEFT JOIN alert_instances ai ON ai.entity_type = 'team' AND ai.entity_id = t.id
+		GROUP BY t.id, tps.total_score
+	`
+
+	rows, err := s.db.Query(query, periodStart, periodStart, periodEnd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get team metrics: %w", err)
+	}
+	defer rows.Close()
+
+	var metrics []TeamMetrics
+	for rows.Next() {
+		var m TeamMetrics
+		if err := rows.Scan(&m.TeamID, &m.TeamScore, &m.PRCount, &m.AlertCount); err != nil {
+			return nil, fmt.Errorf("failed to scan team metrics: %w", err)
+		}
+		metrics = append(metrics, m)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating team metrics: %w", err)
+	}
+
+	return metrics, nil
+}
+
+// GetEngineerMetricsForDate retrieves aggregated metrics for engineers on a specific date
+func (s *DashboardStore) GetEngineerMetricsForDate(periodStart string, limit int) ([]EngineerMetrics, error) {
+	if limit <= 0 {
+		limit = MaxQueryLimit
+	}
+
+	query := `
+		SELECT
+			e.id,
+			COALESCE(ps.total_score, 0) as engineer_score,
+			COUNT(DISTINCT CASE WHEN ev.type = 'pull_request' AND DATE(ev.timestamp) = ? THEN ev.id END) as pr_count
+		FROM engineers e
+		LEFT JOIN (
+			SELECT engineer_id, total_score, created_at,
+				ROW_NUMBER() OVER (PARTITION BY engineer_id ORDER BY created_at DESC) as rn
+			FROM performance_scores
+		) ps ON e.id = ps.engineer_id AND ps.rn = 1
+		LEFT JOIN events ev ON e.email = ev.actor
+		GROUP BY e.id, ps.total_score
+		LIMIT ?
+	`
+
+	rows, err := s.db.Query(query, periodStart, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get engineer metrics: %w", err)
+	}
+	defer rows.Close()
+
+	var metrics []EngineerMetrics
+	for rows.Next() {
+		var m EngineerMetrics
+		if err := rows.Scan(&m.EngineerID, &m.EngineerScore, &m.PRCount); err != nil {
+			return nil, fmt.Errorf("failed to scan engineer metrics: %w", err)
+		}
+		metrics = append(metrics, m)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating engineer metrics: %w", err)
+	}
+
+	return metrics, nil
+}
+
+// GetLatestTeamScore retrieves the most recent team performance score
+func (s *DashboardStore) GetLatestTeamScore(teamID string) (float64, error) {
+	var score sql.NullFloat64
+	err := s.db.QueryRow(`
+		SELECT total_score FROM team_performance_scores
+		WHERE team_id = ?
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, teamID).Scan(&score)
+
+	if err == sql.ErrNoRows || !score.Valid {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed to get latest team score: %w", err)
+	}
+
+	return score.Float64, nil
+}
+
+// CountOrgPRsInRange counts organization-wide PRs in a date range
+func (s *DashboardStore) CountOrgPRsInRange(start, end string) (int, error) {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(*) FROM events
+		WHERE type = 'pull_request'
+		  AND DATE(timestamp) >= ? AND DATE(timestamp) <= ?
+	`, start, end).Scan(&count)
+
+	if err != nil && err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to count org PRs in range: %w", err)
+	}
+
+	return count, nil
+}
+
+// CountTeamPRsInRange counts team PRs in a date range
+func (s *DashboardStore) CountTeamPRsInRange(teamID, start, end string) (int, error) {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(DISTINCT e.id) FROM events e
+		INNER JOIN engineers eng ON e.actor = eng.email
+		INNER JOIN team_membership tm ON eng.id = tm.member_id AND tm.left_at IS NULL
+		WHERE tm.team_id = ?
+		  AND e.type = 'pull_request'
+		  AND DATE(e.timestamp) >= ? AND DATE(e.timestamp) <= ?
+	`, teamID, start, end).Scan(&count)
+
+	if err != nil && err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to count team PRs in range: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetEngineerEmail retrieves an engineer's email by their ID
+func (s *DashboardStore) GetEngineerEmail(engineerID string) (string, error) {
+	var email string
+	err := s.db.QueryRow(`SELECT email FROM engineers WHERE id = ?`, engineerID).Scan(&email)
+
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("engineer not found: %s", engineerID)
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to get engineer email: %w", err)
+	}
+
+	return email, nil
+}
+
+// CountEngineerPRsInRange counts engineer PRs in a date range
+func (s *DashboardStore) CountEngineerPRsInRange(email, start, end string) (int, error) {
+	var count int
+	err := s.db.QueryRow(`
+		SELECT COUNT(*) FROM events
+		WHERE actor = ?
+		  AND type = 'pull_request'
+		  AND DATE(timestamp) >= ? AND DATE(timestamp) <= ?
+	`, email, start, end).Scan(&count)
+
+	if err != nil && err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to count engineer PRs in range: %w", err)
+	}
+
+	return count, nil
+}
+
+// CalculateAvgCycleTime calculates average PR cycle time (open to merge) in hours
+func (s *DashboardStore) CalculateAvgCycleTime(start, end string) (float64, error) {
+	query := `
+		SELECT
+			AVG(CAST((julianday(merged_at) - julianday(created_at)) * 24 AS REAL)) as avg_hours
+		FROM (
+			SELECT
+				json_extract(data, '$.created_at') as created_at,
+				json_extract(data, '$.merged_at') as merged_at
+			FROM events
+			WHERE type = 'pull_request'
+			  AND json_extract(data, '$.merged') = 1
+			  AND DATE(timestamp) >= ? AND DATE(timestamp) <= ?
+		)`
+
+	var avgCycleTime sql.NullFloat64
+	err := s.db.QueryRow(query, start, end).Scan(&avgCycleTime)
+
+	if err != nil && err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to calculate avg cycle time: %w", err)
+	}
+
+	if !avgCycleTime.Valid {
+		return 0, nil
+	}
+
+	return avgCycleTime.Float64, nil
+}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/models"
 )
 
@@ -27,7 +28,7 @@ func (s *Server) listSkills(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if limit == 0 {
-		limit = 100
+		limit = db.DefaultQueryLimit
 	}
 
 	offset, err := parseOffsetParam(r)

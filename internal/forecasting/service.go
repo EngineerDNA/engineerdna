@@ -52,12 +52,12 @@ func (s *ForecastingService) ForecastSprintCompletion(sprintID string) (*models.
 	// Calculate current pace
 	daysElapsed := time.Since(sprint.StartDate).Hours() / 24
 	if daysElapsed <= 0 {
-		daysElapsed = 1
+		daysElapsed = MinimumDaysElapsed
 	}
 
 	currentPace := completedPoints / daysElapsed
 	if currentPace == 0 {
-		currentPace = 0.1 // Minimum pace to avoid division by zero
+		currentPace = MinimumPace
 	}
 
 	// Predict remaining time
@@ -68,13 +68,13 @@ func (s *ForecastingService) ForecastSprintCompletion(sprintID string) (*models.
 
 	// Calculate confidence based on historical variance
 	historicalVariance := s.calculateSprintVariance(sprint.TeamID)
-	confidencePct := 100.0 - (historicalVariance * 10) // Higher variance = lower confidence
-	if confidencePct < 50.0 {
-		confidencePct = 50.0
+	confidencePct := MaxProgressPercent - (historicalVariance * 10) // Higher variance = lower confidence
+	if confidencePct < ConfidenceMinimum {
+		confidencePct = ConfidenceMinimum
 	}
 
 	// Monte Carlo for confidence interval
-	low, high := s.monteCarloSprintSimulation(sprint, completedPoints, currentPace, 100)
+	low, high := s.monteCarloSprintSimulation(sprint, completedPoints, currentPace, DefaultMonteCarloSimulations)
 
 	// Prepare input data
 	inputData := map[string]interface{}{
@@ -85,7 +85,10 @@ func (s *ForecastingService) ForecastSprintCompletion(sprintID string) (*models.
 		"current_pace":     currentPace,
 		"points_remaining": pointsRemaining,
 	}
-	inputDataJSON, _ := json.Marshal(inputData)
+	inputDataJSON, err := json.Marshal(inputData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal input data: %w", err)
+	}
 
 	forecast := &models.Forecast{
 		ID:                     uuid.New().String(),
@@ -127,12 +130,12 @@ func (s *ForecastingService) ForecastGoalCompletion(goalID string) (*models.Fore
 	// Calculate rate of progress
 	daysElapsed := time.Since(goal.StartDate).Hours() / 24
 	if daysElapsed <= 0 {
-		daysElapsed = 1
+		daysElapsed = MinimumDaysElapsed
 	}
 
 	progressRate := currentProgress / daysElapsed
 	if progressRate == 0 {
-		progressRate = 0.1
+		progressRate = MinimumProgressRate
 	}
 
 	// Predict completion date
@@ -142,16 +145,16 @@ func (s *ForecastingService) ForecastGoalCompletion(goalID string) (*models.Fore
 	predictedDate := time.Now().UTC().Add(time.Duration(daysNeeded*24) * time.Hour)
 
 	// Calculate confidence
-	confidencePct := 85.0
+	confidencePct := ConfidenceMedium
 	if goal.Status == "at_risk" {
-		confidencePct = 60.0
+		confidencePct = ConfidenceLow
 	} else if goal.Status == "off_track" {
-		confidencePct = 40.0
+		confidencePct = ConfidenceDefault
 	}
 
 	// Confidence interval (±20%)
-	low := currentProgress + (progressRemaining * 0.8)
-	high := currentProgress + (progressRemaining * 1.2)
+	low := currentProgress + (progressRemaining * ConfidenceIntervalLowMultiplier)
+	high := currentProgress + (progressRemaining * ConfidenceIntervalHighMultiplier)
 
 	inputData := map[string]interface{}{
 		"goal_id":            goalID,
@@ -160,7 +163,10 @@ func (s *ForecastingService) ForecastGoalCompletion(goalID string) (*models.Fore
 		"progress_rate":      progressRate,
 		"progress_remaining": progressRemaining,
 	}
-	inputDataJSON, _ := json.Marshal(inputData)
+	inputDataJSON, err := json.Marshal(inputData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal input data: %w", err)
+	}
 
 	forecast := &models.Forecast{
 		ID:                     uuid.New().String(),
@@ -189,7 +195,7 @@ func (s *ForecastingService) ForecastGoalCompletion(goalID string) (*models.Fore
 // ForecastTeamVelocity predicts team velocity for next sprint
 func (s *ForecastingService) ForecastTeamVelocity(teamID string) (*models.Forecast, error) {
 	// Get recent sprint velocities
-	velocities := s.getRecentVelocities(teamID, 5) // Last 5 sprints
+	velocities := s.getRecentVelocities(teamID, DefaultHistoricalSprintCount)
 	if len(velocities) == 0 {
 		return nil, fmt.Errorf("no historical velocity data for team %s", teamID)
 	}
@@ -206,9 +212,9 @@ func (s *ForecastingService) ForecastTeamVelocity(teamID string) (*models.Foreca
 	// Calculate confidence based on variance
 	variance := calculateVariance(velocities)
 	stdDev := calculateStdDev(variance)
-	confidencePct := 90.0 - (stdDev * 5)
-	if confidencePct < 50.0 {
-		confidencePct = 50.0
+	confidencePct := ConfidenceHigh - (stdDev * ConfidenceStdDevFactor)
+	if confidencePct < ConfidenceMinimum {
+		confidencePct = ConfidenceMinimum
 	}
 
 	// Confidence interval (±1 std dev)
@@ -223,7 +229,10 @@ func (s *ForecastingService) ForecastTeamVelocity(teamID string) (*models.Foreca
 		"variance":              variance,
 		"std_dev":               stdDev,
 	}
-	inputDataJSON, _ := json.Marshal(inputData)
+	inputDataJSON, err := json.Marshal(inputData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal input data: %w", err)
+	}
 
 	nextSprint := time.Now().UTC().Add(14 * 24 * time.Hour)
 
@@ -264,9 +273,9 @@ func (s *ForecastingService) calculateCompletedPoints(sprintID string) float64 {
 }
 
 func (s *ForecastingService) calculateSprintVariance(teamID string) float64 {
-	velocities := s.getRecentVelocities(teamID, 10)
+	velocities := s.getRecentVelocities(teamID, MaxHistoricalSprintCount)
 	if len(velocities) < 2 {
-		return 0.5 // Default variance
+		return DefaultVariance
 	}
 	return calculateVariance(velocities)
 }

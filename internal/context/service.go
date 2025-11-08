@@ -31,13 +31,13 @@ func (s *Service) GetEngineerContext(engineerID string) (*models.EngineerContext
 	}
 
 	// Get all notes for this engineer (both as subject and as manager)
-	notes, _, err := s.contextStore.ListManagerNotes("", "engineer", engineerID, []string{"private", "shared_with_subject", "team", "org"}, 100, 0)
+	notes, _, err := s.contextStore.ListManagerNotes("", "engineer", engineerID, []string{"private", "shared_with_subject", "team", "org"}, db.DefaultQueryLimit, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get annotations
-	annotations, _, err := s.contextStore.GetContextAnnotations("engineer", engineerID, 100, 0)
+	annotations, _, err := s.contextStore.GetContextAnnotations("engineer", engineerID, db.DefaultQueryLimit, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -56,13 +56,13 @@ func (s *Service) GetEngineerContext(engineerID string) (*models.EngineerContext
 
 // GetMetricContext returns context explaining metric changes
 func (s *Service) GetMetricContext(metricType, metricID string) ([]*models.ContextAnnotation, error) {
-	annotations, _, err := s.contextStore.GetContextAnnotations(metricType, metricID, 100, 0)
+	annotations, _, err := s.contextStore.GetContextAnnotations(metricType, metricID, db.DefaultQueryLimit, 0)
 	return annotations, err
 }
 
 // GetEventContext returns context for a specific event
 func (s *Service) GetEventContext(eventID string) ([]*models.ContextAnnotation, error) {
-	annotations, _, err := s.contextStore.GetContextAnnotations("event", eventID, 100, 0)
+	annotations, _, err := s.contextStore.GetContextAnnotations("event", eventID, db.DefaultQueryLimit, 0)
 	return annotations, err
 }
 
@@ -82,7 +82,7 @@ func (s *Service) LinkContextToMetric(metricType, metricID, content, authorID st
 // SearchNotes searches manager notes by content, tags, or subject
 func (s *Service) SearchNotes(managerID, searchTerm string) ([]*models.ManagerNote, error) {
 	// Get all notes for the manager
-	notes, _, err := s.contextStore.ListManagerNotes(managerID, "", "", []string{"private", "shared_with_subject", "team", "org"}, 1000, 0)
+	notes, _, err := s.contextStore.ListManagerNotes(managerID, "", "", []string{"private", "shared_with_subject", "team", "org"}, db.MaxQueryLimit, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (s *Service) SearchNotes(managerID, searchTerm string) ([]*models.ManagerNo
 
 // GetActionItems extracts all action items from notes
 func (s *Service) GetActionItems(managerID string) ([]string, error) {
-	notes, _, err := s.contextStore.ListManagerNotes(managerID, "", "", []string{"private", "shared_with_subject", "team", "org"}, 1000, 0)
+	notes, _, err := s.contextStore.ListManagerNotes(managerID, "", "", []string{"private", "shared_with_subject", "team", "org"}, db.MaxQueryLimit, 0)
 	if err != nil {
 		return nil, err
 	}

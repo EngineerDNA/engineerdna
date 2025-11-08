@@ -96,7 +96,7 @@ func (d *Detector) detectPRSkills(event *models.Event, data map[string]interface
 					SkillID:        "testing",
 					EvidenceType:   "test_to_code_ratio",
 					EvidenceSource: event.ID,
-					Strength:       min(testRatio, 1.0) * 0.6,
+					Strength:       min(testRatio, MaxSkillStrength) * TestCoverageMultiplier,
 					DetectedAt:     time.Now().UTC(),
 				})
 			}
@@ -161,7 +161,7 @@ func (d *Detector) detectReviewSkills(event *models.Event, data map[string]inter
 		strength = 0.4
 	}
 	if commentCount > 10 {
-		strength = 0.6
+		strength = CodeReviewMultiplier
 	}
 
 	evidences = append(evidences, &models.SkillEvidence{
@@ -243,7 +243,7 @@ func (d *Detector) detectDocumentationSkills(event *models.Event, data map[strin
 			SkillID:        "system_design",
 			EvidenceType:   "design_doc",
 			EvidenceSource: event.ID,
-			Strength:       0.6,
+			Strength:       DefaultSkillStrength,
 			DetectedAt:     time.Now().UTC(),
 		})
 	}
@@ -263,7 +263,7 @@ func (d *Detector) DetectCodeQualitySkill(engineerID string, timeframe time.Dura
 		"end_date":    endDate,
 	}
 
-	events, err := d.eventStore.List(filters, 1000, 0)
+	events, err := d.eventStore.List(filters, db.MaxQueryLimit, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
 	}

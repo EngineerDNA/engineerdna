@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/engineerdna/engineerdna/internal/db"
 )
 
 // handleEvents routes event-related requests
@@ -40,13 +42,13 @@ func (s *Server) listEvents(w http.ResponseWriter, r *http.Request) {
 		filters["actor"] = actor
 	}
 
-	limit := 50
+	limit := DefaultAPILimit
 	if limitStr := query.Get("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			limit = l
-			// Cap limit at 1000 to prevent excessive memory usage
-			if limit > 1000 {
-				limit = 1000
+			// Cap limit at db.MaxQueryLimit to prevent excessive memory usage
+			if limit > db.MaxQueryLimit {
+				limit = db.MaxQueryLimit
 			}
 		}
 	}

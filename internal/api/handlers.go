@@ -25,6 +25,7 @@ import (
 	"github.com/engineerdna/engineerdna/internal/scheduler"
 	"github.com/engineerdna/engineerdna/internal/scoring"
 	"github.com/engineerdna/engineerdna/internal/sentiment"
+	"github.com/engineerdna/engineerdna/internal/services"
 	"github.com/engineerdna/engineerdna/internal/skills"
 	"github.com/engineerdna/engineerdna/internal/team"
 )
@@ -55,7 +56,14 @@ type Server struct {
 	dashboardStore     *db.DashboardStore
 	engineerStore      *db.EngineerStore
 	healthStore        *db.HealthStore
+	metricStore        *db.MetricStore
+	attributeStore     *db.AttributeStore
+	correlationStore   *db.CorrelationStore
 	executor           *plugin.Executor
+	metricEngine       *services.MetricEngine
+	correlationEngine  *services.CorrelationEngine
+	ruleInsights       *services.RuleBasedInsights
+	widgetRegistry     *plugin.WidgetRegistry
 	anonService        *anonymization.Service
 	identityService    *identity.Service
 	scoringService     *scoring.ScoringService
@@ -106,7 +114,15 @@ func NewServer(
 	dashboardStore *db.DashboardStore,
 	engineerStore *db.EngineerStore,
 	healthStore *db.HealthStore,
+	metricStore *db.MetricStore,
+	attributeStore *db.AttributeStore,
+	correlationStore *db.CorrelationStore,
+	manifestStore *db.PluginManifestStore,
 	executor *plugin.Executor,
+	metricEngine *services.MetricEngine,
+	correlationEngine *services.CorrelationEngine,
+	ruleInsights *services.RuleBasedInsights,
+	widgetRegistry *plugin.WidgetRegistry,
 	anonService *anonymization.Service,
 	identityService *identity.Service,
 	scoringService *scoring.ScoringService,
@@ -154,7 +170,14 @@ func NewServer(
 		dashboardStore:     dashboardStore,
 		engineerStore:      engineerStore,
 		healthStore:        healthStore,
+		metricStore:        metricStore,
+		attributeStore:     attributeStore,
+		correlationStore:   correlationStore,
 		executor:           executor,
+		metricEngine:       metricEngine,
+		correlationEngine:  correlationEngine,
+		ruleInsights:       ruleInsights,
+		widgetRegistry:     widgetRegistry,
 		anonService:        anonService,
 		identityService:    identityService,
 		scoringService:     scoringService,

@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/engineerdna/engineerdna/internal/models"
@@ -432,6 +433,70 @@ func (s *Server) handleAlertsTimeline(w http.ResponseWriter, r *http.Request) {
 		"events": timelineEvents,
 		"count":  len(timelineEvents),
 	})
+}
+
+// handleWidgetRegistry lists all available widgets from plugin registry
+// GET /api/widgets/registry
+func (s *Server) handleWidgetRegistry(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Check if widget registry is available
+	if s.widgetRegistry == nil {
+		respondError(w, http.StatusInternalServerError, "Widget registry not available", nil)
+		return
+	}
+
+	// Get optional plugin filter
+	pluginName := r.URL.Query().Get("plugin")
+	widgetType := r.URL.Query().Get("type")
+
+	var widgets interface{}
+	if pluginName != "" {
+		widgets = s.widgetRegistry.ListWidgetsByPlugin(pluginName)
+	} else if widgetType != "" {
+		widgets = s.widgetRegistry.GetWidgetsByType(widgetType)
+	} else {
+		widgets = s.widgetRegistry.ListWidgets()
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"widgets": widgets,
+	})
+}
+
+// handleWidgetByID retrieves a specific widget definition
+// GET /api/widgets/registry/{widget_id}
+func (s *Server) handleWidgetByID(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract widget ID from path
+	path := strings.TrimPrefix(r.URL.Path, "/api/widgets/registry/")
+	widgetID := strings.TrimSpace(path)
+
+	if widgetID == "" {
+		respondError(w, http.StatusBadRequest, "Widget ID is required", nil)
+		return
+	}
+
+	// Check if widget registry is available
+	if s.widgetRegistry == nil {
+		respondError(w, http.StatusInternalServerError, "Widget registry not available", nil)
+		return
+	}
+
+	widget, ok := s.widgetRegistry.GetWidget(widgetID)
+	if !ok {
+		respondError(w, http.StatusNotFound, "Widget not found", nil)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, widget)
 }
 
 // Helper function to calculate period date ranges

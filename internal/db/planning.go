@@ -101,7 +101,7 @@ func (s *PlanningStore) ListSprints(limit int) ([]*models.Sprint, error) {
 		limit = 100 // Default
 	}
 	if limit > 1000 {
-		limit = 1000 // Maximum
+		limit = MaxQueryLimit
 	}
 
 	query := `
@@ -197,7 +197,7 @@ func (s *PlanningStore) GetSprintsByTeam(teamID string, limit int) ([]*models.Sp
 		limit = 100 // Default
 	}
 	if limit > 1000 {
-		limit = 1000 // Maximum
+		limit = MaxQueryLimit
 	}
 
 	query := `
@@ -354,7 +354,7 @@ func (s *PlanningStore) ListEpics(limit int) ([]*models.Epic, error) {
 		limit = 100 // Default
 	}
 	if limit > 1000 {
-		limit = 1000 // Maximum
+		limit = MaxQueryLimit
 	}
 
 	query := `
@@ -560,7 +560,7 @@ func (s *PlanningStore) ListStories(limit int) ([]*models.Story, error) {
 		limit = 100 // Default
 	}
 	if limit > 1000 {
-		limit = 1000 // Maximum
+		limit = MaxQueryLimit
 	}
 
 	query := `

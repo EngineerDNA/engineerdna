@@ -191,7 +191,7 @@ func (s *ActionService) GenerateActionReport(managerID string, days int) (*model
 	filters := map[string]string{
 		"taken_by": managerID,
 	}
-	actions, err := s.actionsStore.ListActions(filters, 1000)
+	actions, err := s.actionsStore.ListActions(filters, db.MaxQueryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get actions: %w", err)
 	}

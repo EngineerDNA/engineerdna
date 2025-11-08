@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/engineerdna/engineerdna/internal/constants"
 	"github.com/engineerdna/engineerdna/internal/models"
 	"github.com/google/uuid"
 )
@@ -86,10 +87,17 @@ func (s *ForecastingService) PredictAttritionRisk(engineerID string) (*models.Ri
 	// Generate mitigations
 	mitigations := s.generateAttritionMitigations(factors)
 
-	factorsJSON, _ := json.Marshal(factors)
-	mitigationsJSON, _ := json.Marshal(mitigations)
+	factorsJSON, err := json.Marshal(factors)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal risk factors: %w", err)
+	}
 
-	validUntil := time.Now().UTC().Add(30 * 24 * time.Hour)
+	mitigationsJSON, err := json.Marshal(mitigations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal mitigations: %w", err)
+	}
+
+	validUntil := time.Now().UTC().Add(constants.RiskValidityPeriod)
 
 	return &models.RiskPrediction{
 		ID:                    uuid.New().String(),
@@ -184,8 +192,15 @@ func (s *ForecastingService) PredictTimelineMiss(sprintID string) (*models.RiskP
 
 	mitigations := s.generateTimelineMitigations(factors, sprint)
 
-	factorsJSON, _ := json.Marshal(factors)
-	mitigationsJSON, _ := json.Marshal(mitigations)
+	factorsJSON, err := json.Marshal(factors)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal risk factors: %w", err)
+	}
+
+	mitigationsJSON, err := json.Marshal(mitigations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal mitigations: %w", err)
+	}
 
 	return &models.RiskPrediction{
 		ID:                    uuid.New().String(),
@@ -264,10 +279,17 @@ func (s *ForecastingService) PredictQualityDegradation(teamID string) (*models.R
 
 	mitigations := s.generateQualityMitigations(factors)
 
-	factorsJSON, _ := json.Marshal(factors)
-	mitigationsJSON, _ := json.Marshal(mitigations)
+	factorsJSON, err := json.Marshal(factors)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal risk factors: %w", err)
+	}
 
-	validUntil := time.Now().UTC().Add(30 * 24 * time.Hour)
+	mitigationsJSON, err := json.Marshal(mitigations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal mitigations: %w", err)
+	}
+
+	validUntil := time.Now().UTC().Add(constants.RiskValidityPeriod)
 
 	return &models.RiskPrediction{
 		ID:                    uuid.New().String(),

@@ -99,7 +99,7 @@ func (s *GoalsStore) ListGoals(ownerType, ownerID, status, timePeriod string, li
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Build WHERE clause for both count and data queries
@@ -315,7 +315,7 @@ func (s *GoalsStore) GetMilestones(goalID string, limit, offset int) ([]*models.
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total milestones for this goal
@@ -429,7 +429,7 @@ func (s *GoalsStore) GetProgressLogs(goalID string, limit, offset int) ([]*model
 		limit = 20
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total progress logs for this goal
@@ -520,7 +520,7 @@ func (s *GoalsStore) GetDependencies(goalID string, limit, offset int) ([]*model
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total dependencies for this goal
@@ -587,7 +587,7 @@ func (s *GoalsStore) GetGoalMetrics(goalID string, limit, offset int) ([]*models
 		limit = 100
 	}
 	if limit > 1000 {
-		limit = 1000
+		limit = MaxQueryLimit
 	}
 
 	// Count total metrics for this goal

@@ -87,7 +87,7 @@ func (a *Analyzer) CategorizeWork(event *models.Event) string {
 // AnalyzeTimeAllocation analyzes where time is being spent
 func (a *Analyzer) AnalyzeTimeAllocation(timePeriod string, teamID *string) (*models.InvestmentBreakdown, error) {
 	// Get investment data
-	investments, err := a.store.GetEngineeringInvestment(timePeriod, teamID, 100)
+	investments, err := a.store.GetEngineeringInvestment(timePeriod, teamID, db.DefaultQueryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get investment data: %w", err)
 	}
@@ -158,8 +158,8 @@ func (a *Analyzer) IdentifyInefficiencies(breakdown *models.InvestmentBreakdown)
 		}
 
 		// Too much tech debt
-		if inv.Category == "tech_debt" && percentage > 30.0 {
-			issues = append(issues, fmt.Sprintf("Tech debt is %.1f%% (recommended < 30%%)", percentage))
+		if inv.Category == "tech_debt" && percentage > MaxRecommendedTechDebtPercent {
+			issues = append(issues, fmt.Sprintf("Tech debt is %.1f%% (recommended < %.0f%%)", percentage, MaxRecommendedTechDebtPercent))
 		}
 
 		// Too little customer features
@@ -202,7 +202,7 @@ func (a *Analyzer) ComputeInvestmentForPeriod(timePeriod string, startDate, endD
 		"type": "pull_request",
 	}
 
-	events, err := a.eventStore.List(filters, 10000, 0)
+	events, err := a.eventStore.List(filters, db.MaxEventQueryLimit, 0)
 	if err != nil {
 		return fmt.Errorf("failed to get events: %w", err)
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/engineerdna/engineerdna/internal/models"
+	"github.com/engineerdna/engineerdna/internal/utils"
 	"github.com/google/uuid"
 )
 
@@ -128,7 +129,7 @@ func (s *ForecastingService) simulateCapacityChange(scenario *models.Scenario, p
 
 	currentVelocity := s.calculateCurrentTeamVelocity(teamID)
 	if currentVelocity == 0 {
-		currentVelocity = 30.0 // Default
+		currentVelocity = DefaultVelocity
 	}
 
 	// Calculate velocity impact
@@ -138,22 +139,22 @@ func (s *ForecastingService) simulateCapacityChange(scenario *models.Scenario, p
 		// New engineers add capacity but with ramp time
 		rampWeeks := params.RampWeeks
 		if rampWeeks == 0 {
-			rampWeeks = 6 // Default ramp
+			rampWeeks = DefaultRampWeeks
 		}
 
 		// Role-based productivity
-		productivity := 1.0
+		productivity := ProductivityMid
 		switch params.EngineerRole {
 		case "junior":
-			productivity = 0.6
+			productivity = ProductivityJunior
 		case "mid":
-			productivity = 1.0
+			productivity = ProductivityMid
 		case "senior":
-			productivity = 1.3
+			productivity = ProductivitySenior
 		}
 
 		// During ramp: 50% productivity
-		rampVelocity := currentVelocity + (float64(params.NewEngineers) * productivity * 0.5)
+		rampVelocity := currentVelocity + (float64(params.NewEngineers) * productivity * ProductivityDuringRamp)
 		// Post-ramp: full productivity
 		fullVelocity := currentVelocity + (float64(params.NewEngineers) * productivity)
 
@@ -164,7 +165,7 @@ func (s *ForecastingService) simulateCapacityChange(scenario *models.Scenario, p
 			ScenarioID:             scenario.ID,
 			MetricName:             "velocity_during_ramp",
 			PredictedValue:         rampVelocity,
-			DifferenceFromBaseline: ptrFloat64(rampVelocity - currentVelocity),
+			DifferenceFromBaseline: utils.PtrFloat64(rampVelocity - currentVelocity),
 			Impact:                 determineImpact(rampVelocity, currentVelocity),
 			ComputedAt:             time.Now().UTC(),
 		})
@@ -172,7 +173,7 @@ func (s *ForecastingService) simulateCapacityChange(scenario *models.Scenario, p
 
 	if params.RemovedEngineers > 0 {
 		// Removing engineers reduces capacity
-		reductionFactor := float64(params.RemovedEngineers) / 5.0 // Assume team of 5
+		reductionFactor := float64(params.RemovedEngineers) / DefaultTeamSize
 		newVelocity = currentVelocity * (1.0 - reductionFactor)
 	}
 
@@ -182,13 +183,13 @@ func (s *ForecastingService) simulateCapacityChange(scenario *models.Scenario, p
 		ScenarioID:             scenario.ID,
 		MetricName:             "new_velocity",
 		PredictedValue:         newVelocity,
-		DifferenceFromBaseline: ptrFloat64(newVelocity - currentVelocity),
+		DifferenceFromBaseline: utils.PtrFloat64(newVelocity - currentVelocity),
 		Impact:                 determineImpact(newVelocity, currentVelocity),
 		ComputedAt:             time.Now().UTC(),
 	})
 
 	// Cost result
-	costPerEngineer := 15000.0 // Monthly cost per engineer
+	costPerEngineer := DefaultCostPerEngineer
 	newCost := 0.0
 	currentCost := 0.0
 
@@ -204,7 +205,7 @@ func (s *ForecastingService) simulateCapacityChange(scenario *models.Scenario, p
 		ScenarioID:             scenario.ID,
 		MetricName:             "monthly_cost_delta",
 		PredictedValue:         newCost,
-		DifferenceFromBaseline: ptrFloat64(newCost - currentCost),
+		DifferenceFromBaseline: utils.PtrFloat64(newCost - currentCost),
 		Impact:                 determineImpact(currentCost, newCost), // Lower cost is better
 		ComputedAt:             time.Now().UTC(),
 	})
@@ -212,15 +213,15 @@ func (s *ForecastingService) simulateCapacityChange(scenario *models.Scenario, p
 	// Completion time result
 	if baseline != nil && baseline.PredictedDate != nil {
 		// Recalculate completion date with new velocity
-		daysNeeded := (baseline.PredictedValue / currentVelocity) * 14 // 2-week sprints
-		newDaysNeeded := (baseline.PredictedValue / newVelocity) * 14
+		daysNeeded := (baseline.PredictedValue / currentVelocity) * SprintDurationDays
+		newDaysNeeded := (baseline.PredictedValue / newVelocity) * SprintDurationDays
 
 		results = append(results, &models.ScenarioResult{
 			ID:                     uuid.New().String(),
 			ScenarioID:             scenario.ID,
 			MetricName:             "days_to_completion",
 			PredictedValue:         newDaysNeeded,
-			DifferenceFromBaseline: ptrFloat64(newDaysNeeded - daysNeeded),
+			DifferenceFromBaseline: utils.PtrFloat64(newDaysNeeded - daysNeeded),
 			Impact:                 determineImpact(daysNeeded, newDaysNeeded), // Fewer days is better
 			ComputedAt:             time.Now().UTC(),
 		})
@@ -255,21 +256,21 @@ func (s *ForecastingService) simulateTimelineAdjustment(scenario *models.Scenari
 		ScenarioID:             scenario.ID,
 		MetricName:             "new_timeline_days",
 		PredictedValue:         newDays,
-		DifferenceFromBaseline: ptrFloat64(newDays - currentDays),
+		DifferenceFromBaseline: utils.PtrFloat64(newDays - currentDays),
 		Impact:                 determineImpact(currentDays, newDays),
 		ComputedAt:             time.Now().UTC(),
 	})
 
 	// Calculate required velocity change
-	requiredVelocity := baseline.PredictedValue / newDays * 14
-	currentVelocity := baseline.PredictedValue / currentDays * 14
+	requiredVelocity := baseline.PredictedValue / newDays * SprintDurationDays
+	currentVelocity := baseline.PredictedValue / currentDays * SprintDurationDays
 
 	results = append(results, &models.ScenarioResult{
 		ID:                     uuid.New().String(),
 		ScenarioID:             scenario.ID,
 		MetricName:             "required_velocity",
 		PredictedValue:         requiredVelocity,
-		DifferenceFromBaseline: ptrFloat64(requiredVelocity - currentVelocity),
+		DifferenceFromBaseline: utils.PtrFloat64(requiredVelocity - currentVelocity),
 		Impact:                 determineImpact(currentVelocity, requiredVelocity),
 		ComputedAt:             time.Now().UTC(),
 	})
@@ -279,11 +280,11 @@ func (s *ForecastingService) simulateTimelineAdjustment(scenario *models.Scenari
 	if scenario.EntityID != nil {
 		teamID = *scenario.EntityID
 	}
-	maxVelocity := s.calculateCurrentTeamVelocity(teamID) * 1.3 // 30% stretch
+	maxVelocity := s.calculateCurrentTeamVelocity(teamID) * MaxVelocityStretchFactor
 
-	feasibility := 100.0
+	feasibility := DefaultFeasibility
 	if requiredVelocity > maxVelocity {
-		feasibility = (maxVelocity / requiredVelocity) * 100
+		feasibility = (maxVelocity / requiredVelocity) * MaxProgressPercent
 	}
 
 	results = append(results, &models.ScenarioResult{
@@ -291,8 +292,8 @@ func (s *ForecastingService) simulateTimelineAdjustment(scenario *models.Scenari
 		ScenarioID:             scenario.ID,
 		MetricName:             "feasibility_percentage",
 		PredictedValue:         feasibility,
-		DifferenceFromBaseline: ptrFloat64(feasibility - 100),
-		Impact:                 determineImpact(100, feasibility),
+		DifferenceFromBaseline: utils.PtrFloat64(feasibility - DefaultFeasibility),
+		Impact:                 determineImpact(DefaultFeasibility, feasibility),
 		ComputedAt:             time.Now().UTC(),
 	})
 
@@ -303,7 +304,7 @@ func (s *ForecastingService) simulateTimelineAdjustment(scenario *models.Scenari
 func (s *ForecastingService) simulateCostOptimization(scenario *models.Scenario, params ScenarioParameters, baseline *models.Forecast) ([]*models.ScenarioResult, error) {
 	results := []*models.ScenarioResult{}
 
-	currentBudget := 100000.0 // Default budget
+	currentBudget := DefaultBudget
 	newBudget := currentBudget
 
 	if params.BudgetIncrease > 0 {
@@ -318,22 +319,22 @@ func (s *ForecastingService) simulateCostOptimization(scenario *models.Scenario,
 		ScenarioID:             scenario.ID,
 		MetricName:             "new_budget",
 		PredictedValue:         newBudget,
-		DifferenceFromBaseline: ptrFloat64(newBudget - currentBudget),
+		DifferenceFromBaseline: utils.PtrFloat64(newBudget - currentBudget),
 		Impact:                 determineImpact(currentBudget, newBudget),
 		ComputedAt:             time.Now().UTC(),
 	})
 
 	// Calculate impact on delivery
 	budgetRatio := newBudget / currentBudget
-	capacityImpact := (budgetRatio - 1) * 0.8 // 80% efficiency
+	capacityImpact := (budgetRatio - 1) * EfficiencyFactor
 
 	results = append(results, &models.ScenarioResult{
 		ID:                     uuid.New().String(),
 		ScenarioID:             scenario.ID,
 		MetricName:             "capacity_change_percentage",
-		PredictedValue:         capacityImpact * 100,
-		DifferenceFromBaseline: ptrFloat64(capacityImpact * 100),
-		Impact:                 determineImpact(0, capacityImpact*100),
+		PredictedValue:         capacityImpact * MaxProgressPercent,
+		DifferenceFromBaseline: utils.PtrFloat64(capacityImpact * MaxProgressPercent),
+		Impact:                 determineImpact(0, capacityImpact*MaxProgressPercent),
 		ComputedAt:             time.Now().UTC(),
 	})
 
@@ -399,13 +400,9 @@ func (s *ForecastingService) RecommendBestScenario(scenarioIDs []string, optimiz
 func (s *ForecastingService) calculateCurrentTeamVelocity(teamID string) float64 {
 	velocities := s.getRecentVelocities(teamID, 3)
 	if len(velocities) == 0 {
-		return 30.0 // Default
+		return DefaultVelocity
 	}
 	return calculateMovingAverage(velocities)
-}
-
-func ptrFloat64(val float64) *float64 {
-	return &val
 }
 
 func determineImpact(baseline, predicted float64) string {

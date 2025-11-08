@@ -5,9 +5,11 @@ import "time"
 type PluginType string
 
 const (
-	PluginTypeSource      PluginType = "source"
-	PluginTypeDestination PluginType = "destination"
-	PluginTypeProcessor   PluginType = "processor"
+	PluginTypeSource          PluginType = "source"
+	PluginTypeDestination     PluginType = "destination"
+	PluginTypeProcessor       PluginType = "processor"
+	PluginTypeMetricSource    PluginType = "metric_source"
+	PluginTypeAttributeSource PluginType = "attribute_source"
 )
 
 type PluginConfig struct {
@@ -21,15 +23,19 @@ type PluginConfig struct {
 }
 
 type PluginMetadata struct {
-	Name          string            `json:"name"`
-	Version       string            `json:"version"`
-	Type          PluginType        `json:"type"`
-	Description   string            `json:"description"`
-	Author        string            `json:"author"`
-	ConfigFields  []ConfigField     `json:"config_fields"`
-	Anonymization AnonymizationSpec `json:"anonymization"`
-	OAuth         *OAuthSpec        `json:"oauth,omitempty"`
-	Schedule      *ScheduleSpec     `json:"schedule,omitempty"`
+	Name                 string            `json:"name"`
+	Version              string            `json:"version"`
+	Type                 PluginType        `json:"type"`
+	Description          string            `json:"description"`
+	Author               string            `json:"author"`
+	ConfigFields         []ConfigField     `json:"config_fields"`
+	Anonymization        AnonymizationSpec `json:"anonymization"`
+	OAuth                *OAuthSpec        `json:"oauth,omitempty"`
+	Schedule             *ScheduleSpec     `json:"schedule,omitempty"`
+	ProvidesMetrics      []MetricSpec      `json:"provides_metrics,omitempty"`
+	ProvidesEventTypes   []EventTypeSpec   `json:"provides_event_types,omitempty"`
+	ProvidesWidgets      []WidgetSpec      `json:"provides_widgets,omitempty"`
+	ProvidesCorrelations []CorrelationSpec `json:"provides_correlations,omitempty"`
 }
 
 type ConfigField struct {
@@ -57,4 +63,50 @@ type OAuthSpec struct {
 type ScheduleSpec struct {
 	Supported bool   `json:"supported"`
 	Default   string `json:"default"`
+}
+
+// MetricSpec describes a metric that a plugin can produce
+type MetricSpec struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Unit        string   `json:"unit"`
+	Granularity []string `json:"granularity"`
+	Dimensions  []string `json:"dimensions,omitempty"`
+}
+
+// EventTypeSpec describes an event type that a plugin can produce
+type EventTypeSpec struct {
+	Type             string            `json:"type"`                        // Source event type (e.g., "pull_request")
+	Description      string            `json:"description"`                 // Human-readable description
+	Schema           string            `json:"schema"`                      // JSON schema for field definitions
+	NormalizedType   string            `json:"normalized_type,omitempty"`   // Normalized type (e.g., "code_review")
+	NormalizationMap map[string]string `json:"normalization_map,omitempty"` // Mapping from normalized fields to source fields
+}
+
+// WidgetSpec describes a widget type that a plugin provides
+type WidgetSpec struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// CorrelationSpec describes a correlation that a plugin can compute
+type CorrelationSpec struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Inputs      []string `json:"inputs"` // Metric names or event types required
+}
+
+// PluginManifest represents plugin capabilities stored in database
+type PluginManifest struct {
+	PluginName           string            `json:"plugin_name"`
+	Version              string            `json:"version"`
+	Type                 PluginType        `json:"type"`
+	Capabilities         []string          `json:"capabilities,omitempty"`
+	ProvidesMetrics      []MetricSpec      `json:"provides_metrics,omitempty"`
+	ProvidesEventTypes   []EventTypeSpec   `json:"provides_event_types,omitempty"`
+	ProvidesWidgets      []WidgetSpec      `json:"provides_widgets,omitempty"`
+	ProvidesCorrelations []CorrelationSpec `json:"provides_correlations,omitempty"`
+	CreatedAt            time.Time         `json:"created_at"`
+	UpdatedAt            time.Time         `json:"updated_at"`
 }
