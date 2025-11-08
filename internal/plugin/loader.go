@@ -132,9 +132,13 @@ func (l *Loader) loadPluginEntry(pluginDir, name string) (*PluginEntry, error) {
 		models.PluginTypeSource,
 		models.PluginTypeDestination,
 		models.PluginTypeProcessor,
-		models.PluginTypeMetricSource,
-		models.PluginTypeAttributeSource,
 	}
+
+	// Check for deprecated types and reject them
+	if metadata.Type == models.PluginTypeMetricSource || metadata.Type == models.PluginTypeAttributeSource {
+		return nil, fmt.Errorf("plugin type %s is deprecated - use 'source' type and return metrics/attributes in SyncResult", metadata.Type)
+	}
+
 	found := false
 	for _, validType := range validTypes {
 		if metadata.Type == validType {
@@ -143,7 +147,7 @@ func (l *Loader) loadPluginEntry(pluginDir, name string) (*PluginEntry, error) {
 		}
 	}
 	if !found {
-		return nil, fmt.Errorf("invalid plugin type: %s (must be source, destination, processor, metric_source, or attribute_source)", metadata.Type)
+		return nil, fmt.Errorf("invalid plugin type: %s (must be source, destination, or processor)", metadata.Type)
 	}
 
 	// Find executable

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -436,6 +438,9 @@ func (p *GitHubPlugin) fetchIssues(ctx context.Context, repo string, since time.
 				}
 			}
 
+			// Extract story points from labels (e.g., "story-points: 8", "points: 5", "sp: 3")
+			storyPoints, hasStoryPoints := extractStoryPoints(labels)
+
 			event := sdk.Event{
 				ID:        uuid.New().String(),
 				Type:      "issue",
@@ -460,6 +465,11 @@ func (p *GitHubPlugin) fetchIssues(ctx context.Context, repo string, since time.
 			}
 			if issue.ClosedAt != nil {
 				event.Data["closed_at"] = issue.ClosedAt.Format(time.RFC3339)
+			}
+
+			// Add story points if found in labels
+			if hasStoryPoints {
+				event.Data["story_points"] = storyPoints
 			}
 
 			events = append(events, event)
@@ -492,6 +502,38 @@ func safeInt(i *int) int {
 		return 0
 	}
 	return *i
+}
+
+// extractStoryPoints parses story points from GitHub issue labels.
+// Supports formats: "story-points: 8", "points: 5", "sp: 3", "8 points", "story points: 13"
+// Returns (points, true) if found, or (0, false) if not found.
+func extractStoryPoints(labels []string) (int, bool) {
+	// Match patterns like:
+	// - "story-points: 8", "story points: 13", "storypoints: 5"
+	// - "points: 5", "pts: 3"
+	// - "sp: 3"
+	// - "8 points", "5 story points"
+	re := regexp.MustCompile(`(?i)(?:story[-\s]?)?(?:points?|sp|pts?):?\s*(\d+)|(\d+)\s*(?:story[-\s]?)?points?`)
+
+	for _, label := range labels {
+		if matches := re.FindStringSubmatch(label); matches != nil {
+			// First capture group: pattern like "story-points: 8"
+			if matches[1] != "" {
+				points, err := strconv.Atoi(matches[1])
+				if err == nil && points > 0 {
+					return points, true
+				}
+			}
+			// Second capture group: pattern like "8 points"
+			if matches[2] != "" {
+				points, err := strconv.Atoi(matches[2])
+				if err == nil && points > 0 {
+					return points, true
+				}
+			}
+		}
+	}
+	return 0, false
 }
 
 func main() {

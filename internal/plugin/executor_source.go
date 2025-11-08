@@ -77,7 +77,7 @@ func (e *Executor) SyncSourcePlugin(pluginName string, since time.Time) ([]*mode
 	// Convert SDK events to internal events
 	events := make([]*models.Event, len(result.Events))
 	for i, sdkEvent := range result.Events {
-		events[i] = &models.Event{
+		event := &models.Event{
 			ID:        sdkEvent.ID,
 			Type:      sdkEvent.Type,
 			Source:    sdkEvent.Source,
@@ -85,6 +85,52 @@ func (e *Executor) SyncSourcePlugin(pluginName string, since time.Time) ([]*mode
 			Timestamp: sdkEvent.Timestamp,
 			Actor:     sdkEvent.Actor,
 			Data:      sdkEvent.Data,
+		}
+
+		// Apply event type normalization if registered
+		if normalizedType, ok := e.eventRegistry.GetNormalizedType(pluginName, sdkEvent.Type); ok {
+			event.NormalizedType = normalizedType
+		}
+
+		events[i] = event
+	}
+
+	// Store metrics if returned
+	if len(result.Metrics) > 0 {
+		for _, sdkMetric := range result.Metrics {
+			metric := &models.MetricValue{
+				MetricName:  sdkMetric.MetricName,
+				Source:      pluginName,
+				Timestamp:   sdkMetric.Timestamp.UTC(),
+				Granularity: sdkMetric.Granularity,
+				Value:       sdkMetric.Value,
+				Unit:        sdkMetric.Unit,
+				Dimensions:  sdkMetric.Dimensions,
+				CreatedAt:   time.Now().UTC(),
+			}
+			if err := e.metricStore.Create(metric); err != nil {
+				return nil, fmt.Errorf("failed to store metric: %w", err)
+			}
+		}
+	}
+
+	// Store attributes if returned
+	if len(result.Attributes) > 0 {
+		for _, sdkAttr := range result.Attributes {
+			attr := &models.EntityAttribute{
+				EntityType:    sdkAttr.EntityType,
+				EntityID:      sdkAttr.EntityID,
+				AttributeName: sdkAttr.AttributeName,
+				Value:         sdkAttr.Value,
+				ValueType:     sdkAttr.ValueType,
+				ValidFrom:     sdkAttr.ValidFrom.UTC(),
+				ValidUntil:    sdkAttr.ValidUntil,
+				Source:        pluginName,
+				CreatedAt:     time.Now().UTC(),
+			}
+			if err := e.attributeStore.Create(attr); err != nil {
+				return nil, fmt.Errorf("failed to store attribute: %w", err)
+			}
 		}
 	}
 

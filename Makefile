@@ -1,4 +1,4 @@
-.PHONY: build clean test run install frontend backend
+.PHONY: build clean test run install frontend backend plugins build-plugins
 
 # Version from git tags or CHANGELOG.md
 VERSION ?= $(shell ./scripts/get-version.sh)
@@ -19,33 +19,37 @@ backend:
 	go build -ldflags="-s -w -X main.Version=$(VERSION)" -o bin/engineerdna .
 
 # Build all plugins
-build-plugins:
-	@echo "Building plugins..."
-	@mkdir -p plugins/csv-import
-	@mkdir -p plugins/github
-	@mkdir -p plugins/ai-insights
-	@mkdir -p plugins/google-sheets-export
-	@mkdir -p plugins/pdf-export
-	@mkdir -p plugins/markdown-export
+plugins:
+	@echo "Building all plugins..."
+	@echo "Building source plugins..."
+	cd plugins/github && go build -ldflags="-s -w" -o github .
+	cd plugins/aws-costs && go build -ldflags="-s -w" -o aws-costs .
+	cd plugins/csv-import && go build -ldflags="-s -w" -o csv-import .
+	@echo "Building processor plugins..."
+	cd plugins/claude-insights && go build -ldflags="-s -w" -o claude-insights .
+	cd plugins/openai-insights && go build -ldflags="-s -w" -o openai-insights .
+	cd plugins/ollama-insights && go build -ldflags="-s -w" -o ollama-insights .
+	cd plugins/ai-insights && go build -ldflags="-s -w" -o ai-insights .
+	@echo "Building destination plugins..."
+	cd plugins/google-sheets-export && go build -ldflags="-s -w" -o google-sheets-export .
+	@echo "All plugins built successfully"
 
-# Build PDF export plugin
-build-pdf-plugin:
-	@echo "Building PDF export plugin..."
-	cd plugins/pdf-export && go build -o pdf-export main.go
-	@echo "PDF export plugin built successfully"
-
-# Build Markdown export plugin
-build-markdown-plugin:
-	@echo "Building Markdown export plugin..."
-	cd plugins/markdown-export && go build -o markdown-export main.go
-	@echo "Markdown export plugin built successfully"
+# Legacy alias
+build-plugins: plugins
 
 # Clean build artifacts
 clean:
 	rm -rf bin/
 	rm -rf frontend/dist/
 	rm -rf frontend/node_modules/
-	find plugins -type f -name "main" -delete
+	rm -f plugins/github/github
+	rm -f plugins/aws-costs/aws-costs
+	rm -f plugins/csv-import/csv-import
+	rm -f plugins/claude-insights/claude-insights
+	rm -f plugins/openai-insights/openai-insights
+	rm -f plugins/ollama-insights/ollama-insights
+	rm -f plugins/ai-insights/ai-insights
+	rm -f plugins/google-sheets-export/google-sheets-export
 	find plugins -type f -name "*.exe" -delete
 
 # Run tests
@@ -104,9 +108,7 @@ help:
 	@echo "  build                - Build frontend and backend"
 	@echo "  frontend             - Build frontend only"
 	@echo "  backend              - Build backend only"
-	@echo "  build-plugins        - Build all plugins"
-	@echo "  build-pdf-plugin     - Build PDF export plugin"
-	@echo "  build-markdown-plugin - Build Markdown export plugin"
+	@echo "  plugins              - Build all plugins"
 	@echo "  clean                - Remove build artifacts"
 	@echo "  test                 - Run tests"
 	@echo "  run                  - Build and run the server"

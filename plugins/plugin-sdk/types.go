@@ -42,6 +42,27 @@ type Event struct {
 	Data      map[string]interface{} `json:"data"`
 }
 
+// Metric represents a time-series measurement
+type Metric struct {
+	MetricName  string                 `json:"metric_name"`
+	Timestamp   time.Time              `json:"timestamp"`
+	Granularity string                 `json:"granularity"` // hourly, daily, weekly, monthly
+	Value       float64                `json:"value"`
+	Unit        string                 `json:"unit,omitempty"`       // dollars, hours, count, percentage
+	Dimensions  map[string]interface{} `json:"dimensions,omitempty"` // Multi-dimensional metrics
+}
+
+// Attribute represents a fact about an entity
+type Attribute struct {
+	EntityType    string     `json:"entity_type"` // team, engineer, org
+	EntityID      string     `json:"entity_id"`
+	AttributeName string     `json:"attribute_name"`
+	Value         string     `json:"value"`
+	ValueType     string     `json:"value_type"`            // string, number, boolean, json
+	ValidFrom     time.Time  `json:"valid_from"`            // When this value became valid
+	ValidUntil    *time.Time `json:"valid_until,omitempty"` // When it stopped being valid (NULL = current)
+}
+
 // PluginInfo contains metadata about the plugin
 type PluginInfo struct {
 	Name               string            `json:"name"`
@@ -109,9 +130,12 @@ type SyncParams struct {
 }
 
 // SyncResult contains the result of a sync operation
+// Plugins can return events, metrics, attributes, or any combination
 type SyncResult struct {
-	Events   []Event  `json:"events"`
-	Warnings []string `json:"warnings,omitempty"` // Track skipped/failed rows
+	Events     []Event     `json:"events,omitempty"`
+	Metrics    []Metric    `json:"metrics,omitempty"`
+	Attributes []Attribute `json:"attributes,omitempty"`
+	Warnings   []string    `json:"warnings,omitempty"` // Track skipped/failed rows
 }
 
 // TestResult represents the result of a destination test

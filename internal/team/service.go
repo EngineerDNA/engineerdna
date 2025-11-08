@@ -221,6 +221,11 @@ func (s *Service) getActiveMembers(teamID string) ([]*models.TeamMembership, err
 
 // getIndividualScore retrieves an individual's performance score for a given week from metric_values
 func (s *Service) getIndividualScore(engineerID string, weekStart time.Time) (*models.PerformanceScore, error) {
+	// If metricStore is not configured, return nil (no scores available)
+	if s.metricStore == nil {
+		return nil, nil
+	}
+
 	// Query metric_values for the week range
 	weekEnd := weekStart.AddDate(0, 0, 7)
 	metrics, err := s.metricStore.GetEngineerScores(engineerID, weekStart, weekEnd, 10)
@@ -267,6 +272,11 @@ func (s *Service) getIndividualScore(engineerID string, weekStart time.Time) (*m
 
 // storeTeamScore stores team performance scores in metric_values table
 func (s *Service) storeTeamScore(score *models.TeamPerformanceScore) error {
+	// If metricStore is not configured, skip storing metrics
+	if s.metricStore == nil {
+		return nil
+	}
+
 	now := time.Now().UTC()
 	dimensions := map[string]interface{}{"team_id": score.TeamID}
 

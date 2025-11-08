@@ -13,7 +13,7 @@ INSERT OR IGNORE INTO audit_log (
     anonymized,
     destination,
     user_initiated,
-    details
+    data_summary
 )
 SELECT
     id,
@@ -25,8 +25,8 @@ SELECT
     destination_url,
     1,
     json_object(
-        'format', format,
-        'file_size', file_size_bytes
+        'status', status,
+        'error_message', error_message
     )
 FROM exports
 WHERE id NOT IN (SELECT id FROM audit_log);

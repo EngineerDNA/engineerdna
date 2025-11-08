@@ -43,8 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Universal multi-modal schema supporting three data types: Events, Metrics, Attributes
 - metric_values table for time-series measurements with granularity and dimensions
 - entity_attributes table for entity facts with temporal validity tracking
-- correlations system for cross-data-type relationships
-- Normalized event types for multi-source support (GitHub PR + GitLab MR → code_review)
+- correlations and correlation_values tables for pre-computed cross-data-type relationships
+- Dashboard widgets display fast historical trends (cost per feature over 12 months)
 
 *Security & Privacy*:
 - Localhost-only binding (127.0.0.1:3847)
@@ -57,19 +57,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Plugin System**
 
 *Architecture*:
-- Five plugin types: Source (events IN), Metric Source (metrics IN), Attribute Source (attributes IN), Destination (data OUT), Processor (transforms)
+- Three plugin types: Source (events/metrics/attributes IN), Processor (transforms/analysis), Destination (data OUT)
+- Unified source.sync response: returns events, metrics, and/or attributes in single call
+- Event normalization: plugins declare event types with normalized mappings (e.g., GitHub PR + GitLab MR → code_review)
 - JSON-RPC communication over stdin/stdout
-- Subprocess isolation with configurable timeouts
+- Subprocess isolation with configurable timeouts (30s default)
 - Plugin discovery from ~/.engineerdna/plugins/ and ./plugins/
-- Plugin SDK for Go developers
-- Plugin manifest registration for capabilities (metrics, events, widgets, correlations)
+- Plugin SDK for Go developers with examples in all plugin directories
 - Automatic anonymization for processor plugins sending to external APIs
+- Simple plugin.json manifest with provides_event_types for multi-source support
 
 *Built-in Plugins*:
-- GitHub Source: Fetches issues and pull requests via GraphQL API
-- CSV Import: Flexible column mapping for custom metrics
-- Google Sheets Export: OAuth 2.0 integration for spreadsheet exports
-- AI Insights: Multi-provider support (Anthropic Claude, OpenAI GPT, Ollama) with BYOK
+- **GitHub Source**: PRs, issues, commits, reviews via GraphQL API (supports story points from labels)
+- **AWS Costs Source**: Daily infrastructure costs and resource usage via Cost Explorer API
+- **CSV Import Source**: Flexible column mapping for events, metrics, and attributes
+- **AI Insights Processor**: Multi-provider support (Anthropic Claude, OpenAI GPT, Ollama) with BYOK and mandatory anonymization
+- **Google Sheets Export Destination**: OAuth 2.0 integration for spreadsheet exports
+- **PDF Export Destination**: Formatted reports with charts and tables
+- **Markdown Export Destination**: Documentation and changelog generation
 
 **Identity Management**
 
@@ -264,7 +269,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Database
 
-**33 migrations total**:
+**34 migrations total**:
 - Core schema: events, plugins, engineers, anonymization, audit log
 - Alert System: 4 tables, 6 indexes
 - Goal Tracking: 5 tables, 7 indexes
@@ -274,8 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Predictive Analytics: 5 tables, 7 indexes
 - Action Tracking: 5 tables, 8 indexes
 - Dashboard System: 2 tables, 4 indexes
-- Universal Schema: metric_values, entity_attributes, correlations, plugin_manifests, event_type_registry, widget_registry (migrations 029-033)
-- Post-migration cleanup: Removed legacy code referencing deleted tables, fixed 3 critical runtime bugs in scoring and team services
+- Universal Schema: metric_values, entity_attributes, correlations, correlation_values
 
 ### API Endpoints
 

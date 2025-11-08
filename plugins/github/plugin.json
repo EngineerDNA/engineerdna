@@ -30,5 +30,22 @@
     "required": false,
     "strategy": "sequential",
     "fields": ["actor", "author", "assignee"]
-  }
+  },
+  "provides_event_types": [
+    {
+      "type": "pull_request",
+      "normalized_type": "code_review",
+      "description": "Pull request created, updated, merged, or closed"
+    },
+    {
+      "type": "issue",
+      "normalized_type": "work_item",
+      "description": "Issue created, updated, or closed"
+    },
+    {
+      "type": "commit",
+      "normalized_type": "code_change",
+      "description": "Commit pushed to repository"
+    }
+  ]
 }

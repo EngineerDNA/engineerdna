@@ -149,7 +149,7 @@ func cmdServe() {
 	// Initialize plugin system
 	pluginDirs := cfg.GetPluginDirs()
 	loader := plugin.NewLoader(pluginDirs)
-	executor := plugin.NewExecutor(loader, anonService, anonStore, pluginStore, auditStore, keyStore)
+	executor := plugin.NewExecutor(loader, anonService, anonStore, pluginStore, auditStore, keyStore, metricStore, attributeStore)
 
 	// Initialize event normalizer and wire to event store
 	eventNormalizer := services.NewEventNormalizer(executor.GetEventRegistry())
@@ -254,6 +254,8 @@ func cmdSync() {
 	pluginStore := db.NewPluginStore(database.DB)
 	anonStore := db.NewAnonymizationStore(database.DB)
 	auditStore := db.NewAuditStore(database.DB)
+	metricStore := db.NewMetricStore(database.DB)
+	attributeStore := db.NewAttributeStore(database.DB)
 
 	// Initialize services
 	keyStore, err := config.NewKeyStore()
@@ -266,7 +268,7 @@ func cmdSync() {
 	// Initialize plugin system
 	pluginDirs := cfg.GetPluginDirs()
 	loader := plugin.NewLoader(pluginDirs)
-	executor := plugin.NewExecutor(loader, anonService, anonStore, pluginStore, auditStore, keyStore)
+	executor := plugin.NewExecutor(loader, anonService, anonStore, pluginStore, auditStore, keyStore, metricStore, attributeStore)
 
 	// Get all configured source plugins
 	configs, err := pluginStore.List(db.MaxQueryLimit)

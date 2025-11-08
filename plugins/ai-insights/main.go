@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/engineerdna/engineerdna/internal/constants"
 	"github.com/engineerdna/engineerdna/plugins/plugin-sdk"
@@ -54,7 +53,7 @@ func (p *AIInsightsPlugin) Info() sdk.PluginInfo {
 		Name:        "ai-insights",
 		Version:     "0.1.0",
 		Type:        "processor",
-		Description: "AI-powered metrics analysis",
+		Description: "DEPRECATED: Use claude-insights, openai-insights, or ollama-insights instead. AI-powered metrics analysis",
 		Author:      "EngineerDNA",
 		ConfigFields: []sdk.ConfigField{
 			{

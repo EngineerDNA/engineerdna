@@ -63,13 +63,29 @@ coverage.html
 # Note: This is in ~/.engineerdna/ so not in repo, but listing for clarity
 # ~/.engineerdna/
 
+# Export files (if accidentally created in repo directory)
+/exports/
+
 # ----------------------------------------------------------------------------
 # Plugin Development
 # ----------------------------------------------------------------------------
 # Compiled plugins (Go binaries)
-/plugins/*/main
-/plugins/*/*/main
-/plugins/*/*.exe
+# Plugin binaries are named after their directory (e.g., plugins/github/github)
+/plugins/*/github
+/plugins/*/aws-costs
+/plugins/*/claude-insights
+/plugins/*/openai-insights
+/plugins/*/ollama-insights
+/plugins/*/csv-import
+/plugins/*/google-sheets-export
+/plugins/*/ai-insights
+/plugins/*/pdf-export
+/plugins/*/markdown-export
+
+# Generic patterns for any plugin binary
+/plugins/**/main
+/plugins/**/*.exe
+/plugins/**/plugin
 
 # Plugin development artifacts
 /plugins/*/.temp/

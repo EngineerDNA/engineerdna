@@ -8,6 +8,7 @@ import (
 
 	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/models"
+	sdk "github.com/engineerdna/engineerdna/plugins/plugin-sdk"
 )
 
 // handlePlugins routes plugin list requests
@@ -45,14 +46,15 @@ func (s *Server) listPlugins(w http.ResponseWriter, r *http.Request) {
 
 	// Response structure
 	type PluginStatus struct {
-		Name        string     `json:"name"`
-		Type        string     `json:"type"`
-		Version     string     `json:"version"`
-		Description string     `json:"description"`
-		Enabled     bool       `json:"enabled"`
-		Configured  bool       `json:"configured"`
-		LastSync    *time.Time `json:"last_sync,omitempty"`
-		Health      string     `json:"health"`
+		Name         string            `json:"name"`
+		Type         string            `json:"type"`
+		Version      string            `json:"version"`
+		Description  string            `json:"description"`
+		Enabled      bool              `json:"enabled"`
+		Configured   bool              `json:"configured"`
+		LastSync     *time.Time        `json:"last_sync,omitempty"`
+		Health       string            `json:"health"`
+		ConfigFields []sdk.ConfigField `json:"config_fields"`
 	}
 
 	plugins := make([]PluginStatus, 0, len(discoveredPlugins))
@@ -89,14 +91,15 @@ func (s *Server) listPlugins(w http.ResponseWriter, r *http.Request) {
 		}
 
 		plugins = append(plugins, PluginStatus{
-			Name:        name,
-			Type:        info.Type,
-			Version:     info.Version,
-			Description: info.Description,
-			Enabled:     enabled,
-			Configured:  isConfigured,
-			LastSync:    lastSync,
-			Health:      health,
+			Name:         name,
+			Type:         info.Type,
+			Version:      info.Version,
+			Description:  info.Description,
+			Enabled:      enabled,
+			Configured:   isConfigured,
+			LastSync:     lastSync,
+			Health:       health,
+			ConfigFields: info.ConfigFields,
 		})
 	}
 

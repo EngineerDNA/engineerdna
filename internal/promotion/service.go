@@ -255,14 +255,16 @@ func (s *Service) getEngineersWithRoles() ([]*models.Engineer, error) {
 }
 
 // getRecentScores retrieves the most recent N weeks of performance scores for an engineer
+// Queries metric_values table (post-PDR-9 migration)
 func (s *Service) getRecentScores(engineerID string, weeks int) ([]*models.PerformanceScore, error) {
+	// Query total scores from metric_values
 	rows, err := s.db.Query(`
-		SELECT id, engineer_id, week_start, total_score,
-		       throughput_score, quality_score, speed_score, collaboration_score, impact_score,
-		       raw_metrics, created_at
-		FROM performance_scores
-		WHERE engineer_id = ?
-		ORDER BY week_start DESC
+		SELECT id, timestamp, value, created_at
+		FROM metric_values
+		WHERE metric_name = 'engineer_total_score'
+		  AND json_extract(dimensions, '$.engineer_id') = ?
+		  AND granularity = 'weekly'
+		ORDER BY timestamp DESC
 		LIMIT ?
 	`, engineerID, weeks)
 	if err != nil {
@@ -273,42 +275,82 @@ func (s *Service) getRecentScores(engineerID string, weeks int) ([]*models.Perfo
 	var scores []*models.PerformanceScore
 	for rows.Next() {
 		var score models.PerformanceScore
-		var throughputScore, qualityScore, speedScore, collaborationScore, impactScore sql.NullFloat64
-		var rawMetrics sql.NullString
+		score.EngineerID = engineerID
+		var weekStartStr, createdAtStr string
 
-		err := rows.Scan(&score.ID, &score.EngineerID, &score.WeekStart, &score.TotalScore,
-			&throughputScore, &qualityScore, &speedScore,
-			&collaborationScore, &impactScore,
-			&rawMetrics, &score.CreatedAt)
+		err := rows.Scan(&score.ID, &weekStartStr, &score.TotalScore, &createdAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan performance score: %w", err)
 		}
 
-		// Handle NULL values
-		if throughputScore.Valid {
-			score.ThroughputScore = throughputScore.Float64
+		// Parse timestamp strings
+		score.WeekStart, err = time.Parse(time.RFC3339, weekStartStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse week_start: %w", err)
 		}
-		if qualityScore.Valid {
-			score.QualityScore = qualityScore.Float64
+		score.CreatedAt, err = time.Parse(time.RFC3339, createdAtStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse created_at: %w", err)
 		}
-		if speedScore.Valid {
-			score.SpeedScore = speedScore.Float64
+
+		// Query component scores for this week (optional, continue if not found)
+		componentScores, err := s.getComponentScores(engineerID, score.WeekStart)
+		if err == nil {
+			// Populate component scores if available
+			score.ThroughputScore = componentScores["throughput"]
+			score.QualityScore = componentScores["quality"]
+			score.SpeedScore = componentScores["speed"]
+			score.CollaborationScore = componentScores["collaboration"]
+			score.ImpactScore = componentScores["impact"]
 		}
-		if collaborationScore.Valid {
-			score.CollaborationScore = collaborationScore.Float64
-		}
-		if impactScore.Valid {
-			score.ImpactScore = impactScore.Float64
-		}
-		if rawMetrics.Valid {
-			score.RawMetrics = rawMetrics.String
-		}
+		// If component scores not found, continue with just total score
 
 		scores = append(scores, &score)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating performance scores: %w", err)
+	}
+
+	return scores, nil
+}
+
+// getComponentScores retrieves component scores for a specific engineer and week
+func (s *Service) getComponentScores(engineerID string, weekStart time.Time) (map[string]float64, error) {
+	scores := make(map[string]float64)
+
+	componentNames := []string{
+		"engineer_throughput_score",
+		"engineer_quality_score",
+		"engineer_speed_score",
+		"engineer_collaboration_score",
+		"engineer_impact_score",
+	}
+
+	for _, metricName := range componentNames {
+		var value sql.NullFloat64
+		err := s.db.QueryRow(`
+			SELECT value
+			FROM metric_values
+			WHERE metric_name = ?
+			  AND json_extract(dimensions, '$.engineer_id') = ?
+			  AND timestamp = ?
+			  AND granularity = 'weekly'
+			LIMIT 1
+		`, metricName, engineerID, weekStart).Scan(&value)
+
+		if err == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to query %s: %w", metricName, err)
+		}
+
+		if value.Valid {
+			// Extract component name (e.g., "throughput" from "engineer_throughput_score")
+			component := metricName[9 : len(metricName)-6] // Remove "engineer_" prefix and "_score" suffix
+			scores[component] = value.Float64
+		}
 	}
 
 	return scores, nil

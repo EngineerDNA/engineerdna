@@ -1,0 +1,81 @@
+{
+  "name": "aws-costs",
+  "version": "0.1.0",
+  "type": "source",
+  "description": "AWS infrastructure costs and resource metrics",
+  "author": "EngineerDNA",
+  "config_fields": [
+    {
+      "name": "aws_access_key_id",
+      "type": "password",
+      "required": true,
+      "description": "AWS Access Key ID",
+      "secret": true
+    },
+    {
+      "name": "aws_secret_access_key",
+      "type": "password",
+      "required": true,
+      "description": "AWS Secret Access Key",
+      "secret": true
+    },
+    {
+      "name": "region",
+      "type": "string",
+      "required": false,
+      "description": "AWS Region",
+      "default": "us-east-1",
+      "secret": false
+    },
+    {
+      "name": "cost_allocation_tags",
+      "type": "string",
+      "required": false,
+      "description": "Comma-separated cost allocation tags (e.g., team,project,env)",
+      "secret": false
+    }
+  ],
+  "anonymization": {
+    "required": false,
+    "reason": "No PII in cost data",
+    "strategy": "sequential",
+    "fields": []
+  },
+  "provides_metrics": [
+    {
+      "name": "aws_cost_total",
+      "description": "Total daily AWS spend",
+      "unit": "dollars",
+      "granularity": ["daily"],
+      "dimensions": ["service", "region"]
+    },
+    {
+      "name": "ec2_instance_count",
+      "description": "Running EC2 instances",
+      "unit": "count",
+      "granularity": ["daily"],
+      "dimensions": ["region", "instance_type"]
+    },
+    {
+      "name": "rds_instance_count",
+      "description": "RDS database instances",
+      "unit": "count",
+      "granularity": ["daily"],
+      "dimensions": ["region", "engine"]
+    },
+    {
+      "name": "s3_storage_gb",
+      "description": "S3 storage usage",
+      "unit": "gigabytes",
+      "granularity": ["daily"],
+      "dimensions": ["region"]
+    },
+    {
+      "name": "lambda_invocations",
+      "description": "Lambda function invocations",
+      "unit": "count",
+      "granularity": ["daily"],
+      "dimensions": ["region", "function_name"]
+    }
+  ]
+}

@@ -9,6 +9,65 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// mockMetricStore is a simple mock implementation for testing
+type mockMetricStore struct {
+	db *sql.DB
+}
+
+func newMockMetricStore(db *sql.DB) *mockMetricStore {
+	return &mockMetricStore{db: db}
+}
+
+func (m *mockMetricStore) Create(metric *models.MetricValue) error {
+	// For tests, we don't need to actually store metrics
+	return nil
+}
+
+func (m *mockMetricStore) GetEngineerScores(engineerID string, startDate, endDate time.Time, limit int) ([]*models.MetricValue, error) {
+	// Query the performance_scores table (test schema)
+	// and convert to MetricValues for compatibility
+	var metrics []*models.MetricValue
+
+	var totalScore, throughputScore, qualityScore, speedScore, collaborationScore, impactScore sql.NullFloat64
+	err := m.db.QueryRow(`
+		SELECT total_score, throughput_score, quality_score, speed_score, collaboration_score, impact_score
+		FROM performance_scores
+		WHERE engineer_id = ?
+		  AND week_start >= ?
+		  AND week_start < ?
+		LIMIT 1
+	`, engineerID, startDate, endDate).Scan(&totalScore, &throughputScore, &qualityScore, &speedScore, &collaborationScore, &impactScore)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to metric values
+	if totalScore.Valid {
+		metrics = append(metrics, &models.MetricValue{MetricName: "engineer_total_score", Value: totalScore.Float64})
+	}
+	if throughputScore.Valid {
+		metrics = append(metrics, &models.MetricValue{MetricName: "engineer_throughput_score", Value: throughputScore.Float64})
+	}
+	if qualityScore.Valid {
+		metrics = append(metrics, &models.MetricValue{MetricName: "engineer_quality_score", Value: qualityScore.Float64})
+	}
+	if speedScore.Valid {
+		metrics = append(metrics, &models.MetricValue{MetricName: "engineer_speed_score", Value: speedScore.Float64})
+	}
+	if collaborationScore.Valid {
+		metrics = append(metrics, &models.MetricValue{MetricName: "engineer_collaboration_score", Value: collaborationScore.Float64})
+	}
+	if impactScore.Valid {
+		metrics = append(metrics, &models.MetricValue{MetricName: "engineer_impact_score", Value: impactScore.Float64})
+	}
+
+	return metrics, nil
+}
+
 func setupTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -113,7 +172,7 @@ func TestCalculateTeamScore_WithMembers(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	service := NewService(db, nil) // metricStore not used in this test
+	service := NewService(db, newMockMetricStore(db))
 
 	// Create team
 	_, err := db.Exec(`INSERT INTO teams (id, name) VALUES ('team1', 'Backend Team')`)

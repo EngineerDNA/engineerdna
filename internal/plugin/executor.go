@@ -12,14 +12,16 @@ import (
 
 // Executor manages plugin execution with anonymization and event normalization
 type Executor struct {
-	loader        *Loader
-	anonService   *anonymization.Service
-	anonStore     *db.AnonymizationStore
-	pluginStore   *db.PluginStore
-	auditStore    *db.AuditStore
-	keyStore      *config.KeyStore
-	metadataCache *MetadataCache
-	eventRegistry *EventTypeRegistry
+	loader         *Loader
+	anonService    *anonymization.Service
+	anonStore      *db.AnonymizationStore
+	pluginStore    *db.PluginStore
+	auditStore     *db.AuditStore
+	keyStore       *config.KeyStore
+	metricStore    *db.MetricStore
+	attributeStore *db.AttributeStore
+	metadataCache  *MetadataCache
+	eventRegistry  *EventTypeRegistry
 }
 
 // NewExecutor creates a new plugin executor
@@ -30,16 +32,20 @@ func NewExecutor(
 	pluginStore *db.PluginStore,
 	auditStore *db.AuditStore,
 	keyStore *config.KeyStore,
+	metricStore *db.MetricStore,
+	attributeStore *db.AttributeStore,
 ) *Executor {
 	return &Executor{
-		loader:        loader,
-		anonService:   anonService,
-		anonStore:     anonStore,
-		pluginStore:   pluginStore,
-		auditStore:    auditStore,
-		keyStore:      keyStore,
-		metadataCache: NewMetadataCache(),
-		eventRegistry: NewEventTypeRegistry(),
+		loader:         loader,
+		anonService:    anonService,
+		anonStore:      anonStore,
+		pluginStore:    pluginStore,
+		auditStore:     auditStore,
+		keyStore:       keyStore,
+		metricStore:    metricStore,
+		attributeStore: attributeStore,
+		metadataCache:  NewMetadataCache(),
+		eventRegistry:  NewEventTypeRegistry(),
 	}
 }
 

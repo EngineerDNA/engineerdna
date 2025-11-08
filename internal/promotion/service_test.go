@@ -103,16 +103,17 @@ func TestDetectPromotionSignals(t *testing.T) {
 		t.Fatalf("Failed to create engineer: %v", err)
 	}
 
-	// Create 8 weeks of performance scores, all above 120% of target (70 * 1.2 = 84)
+	// Create 8 weeks of performance scores in metric_values table
 	now := time.Now().UTC()
 	for i := 0; i < 8; i++ {
 		weekStart := now.AddDate(0, 0, -7*i).Truncate(24 * time.Hour)
 		scoreID := uuid.New().String()
 
 		_, err := database.Exec(`
-			INSERT INTO performance_scores (id, engineer_id, week_start, total_score, created_at)
-			VALUES (?, ?, ?, ?, ?)
-		`, scoreID, engineerID, weekStart, 88.0, time.Now().UTC())
+			INSERT INTO metric_values (id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, scoreID, "engineer_total_score", "scoring_system", weekStart.Format(time.RFC3339), "weekly", 88.0, "score",
+			`{"engineer_id":"`+engineerID+`"}`, time.Now().UTC().Format(time.RFC3339))
 		if err != nil {
 			t.Fatalf("Failed to create performance score: %v", err)
 		}
@@ -172,7 +173,7 @@ func TestDetectPromotionSignalsNoSignal(t *testing.T) {
 		t.Fatalf("Failed to create engineer: %v", err)
 	}
 
-	// Create 8 weeks of performance scores, but some below threshold
+	// Create 8 weeks of performance scores in metric_values table, but some below threshold
 	now := time.Now().UTC()
 	for i := 0; i < 8; i++ {
 		weekStart := now.AddDate(0, 0, -7*i).Truncate(24 * time.Hour)
@@ -185,9 +186,10 @@ func TestDetectPromotionSignalsNoSignal(t *testing.T) {
 		}
 
 		_, err := database.Exec(`
-			INSERT INTO performance_scores (id, engineer_id, week_start, total_score, created_at)
-			VALUES (?, ?, ?, ?, ?)
-		`, scoreID, engineerID, weekStart, score, time.Now().UTC())
+			INSERT INTO metric_values (id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, scoreID, "engineer_total_score", "scoring_system", weekStart.Format(time.RFC3339), "weekly", score, "score",
+			`{"engineer_id":"`+engineerID+`"}`, time.Now().UTC().Format(time.RFC3339))
 		if err != nil {
 			t.Fatalf("Failed to create performance score: %v", err)
 		}
