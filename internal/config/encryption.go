@@ -39,8 +39,12 @@ func NewKeyStore() (*KeyStore, error) {
 		if _, err := rand.Read(key); err != nil {
 			return nil, fmt.Errorf("failed to generate master key: %w", err)
 		}
-		fmt.Printf("Generated new master key. Set this environment variable to persist:\n")
-		fmt.Printf("export ENGINEERDNA_MASTER_KEY=%s\n", base64.StdEncoding.EncodeToString(key))
+		// Print to stderr (not captured by default) with security warnings
+		fmt.Fprintf(os.Stderr, "\n=== MASTER KEY GENERATED ===\n")
+		fmt.Fprintf(os.Stderr, "This key encrypts all secrets. Store it securely.\n")
+		fmt.Fprintf(os.Stderr, "WARNING: Do not share this key or commit it to version control.\n")
+		fmt.Fprintf(os.Stderr, "ENGINEERDNA_MASTER_KEY=%s\n", base64.StdEncoding.EncodeToString(key))
+		fmt.Fprintf(os.Stderr, "===========================\n\n")
 	}
 
 	return &KeyStore{masterKey: key}, nil

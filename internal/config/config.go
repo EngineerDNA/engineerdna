@@ -38,20 +38,23 @@ type PluginsConfig struct {
 
 // DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
-	homeDir, _ := os.UserHomeDir()
+	homeDir, err := os.UserHomeDir()
+	if err != nil || homeDir == "" {
+		// Fallback to current directory if home directory unavailable
+		homeDir = "."
+	}
 	engineerdnaDir := filepath.Join(homeDir, ".engineerdna")
 
-	// Read host from environment (default: 127.0.0.1 for security)
-	host := os.Getenv("ENGINEERDNA_HOST")
-	if host == "" {
-		host = "127.0.0.1"
-	}
-
-	// Read port from environment (default: 3847)
+	// Port can be configured via environment variable
 	port := os.Getenv("ENGINEERDNA_PORT")
 	if port == "" {
 		port = "3847"
 	}
+
+	// Host is hardcoded to 127.0.0.1 for V1 security model.
+	// Network access requires V2 with authentication (JWT, API keys, RBAC).
+	// See CLAUDE.md rule 1: Localhost-only (V1).
+	const localhostOnly = "127.0.0.1"
 
 	return &Config{
 		Database: DatabaseConfig{
@@ -59,7 +62,7 @@ func DefaultConfig() *Config {
 		},
 		Server: ServerConfig{
 			Port: port,
-			Host: host,
+			Host: localhostOnly,
 		},
 		Sync: SyncConfig{
 			Interval: "1h",
