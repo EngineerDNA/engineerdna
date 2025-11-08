@@ -216,6 +216,7 @@ temp/
 !.claude/commands/*.md
 !.claude/skills/**/*.md
 !.github/ISSUE_TEMPLATE/*.md
+!.github/*.md
 !**/CLAUDE.md
 !/README.md
 !/CHANGELOG.md
