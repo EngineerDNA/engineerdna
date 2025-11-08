@@ -12,6 +12,10 @@ const DefaultActivityDays = 30
 // MaxImportRows is the maximum number of rows allowed in CSV import.
 const MaxImportRows = 1000
 
+// DefaultAPILimit is the default number of records returned by API endpoints
+// when the limit parameter is not specified
+const DefaultAPILimit = 50
+
 // ValidIdentifierSources is the whitelist of allowed identifier sources
 var ValidIdentifierSources = map[string]bool{
 	"github": true,

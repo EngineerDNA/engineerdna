@@ -40,4 +40,8 @@ const (
 
 	// MaxIdentifiers is the maximum number of identifiers allowed per engineer.
 	MaxIdentifiers = 50
+
+	// MaxValidationLength is the maximum string length for Levenshtein distance validation
+	// to prevent memory exhaustion DoS attacks
+	MaxValidationLength = 100
 )
