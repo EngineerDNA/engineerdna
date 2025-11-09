@@ -93,6 +93,36 @@ var migration027 string
 //go:embed migrations/028_multi_modal_data.sql
 var migration028 string
 
+//go:embed migrations/029_remove_duplicate_users_table.sql
+var migration029 string
+
+//go:embed migrations/030_remove_unused_tables.sql
+var migration030 string
+
+//go:embed migrations/031_add_foreign_key_constraints.sql
+var migration031 string
+
+//go:embed migrations/032_migrate_performance_scores.sql
+var migration032 string
+
+//go:embed migrations/033_migrate_cost_configuration.sql
+var migration033 string
+
+//go:embed migrations/034_cleanup_pdr9_features.sql
+var migration034 string
+
+//go:embed migrations/035_add_role_and_dashboard_prefs.sql
+var migration035 string
+
+//go:embed migrations/036_dashboard_templates.sql
+var migration036 string
+
+//go:embed migrations/037_seed_dashboard_templates.sql
+var migration037 string
+
+//go:embed migrations/038_fix_events_normalized_data.sql
+var migration038 string
+
 // RunMigrations applies all pending database migrations
 func RunMigrations(db *sql.DB) error {
 	// Create migrations table if it doesn't exist
@@ -139,6 +169,16 @@ func RunMigrations(db *sql.DB) error {
 		{"026_fix_dashboard_timestamp_types", migration026},
 		{"027_convert_dashboard_timestamp_format", migration027},
 		{"028_multi_modal_data", migration028},
+		{"029_remove_duplicate_users_table", migration029},
+		{"030_remove_unused_tables", migration030},
+		{"031_add_foreign_key_constraints", migration031},
+		{"032_migrate_performance_scores", migration032},
+		{"033_migrate_cost_configuration", migration033},
+		{"034_cleanup_pdr9_features", migration034},
+		{"035_add_role_and_dashboard_prefs", migration035},
+		{"036_dashboard_templates", migration036},
+		{"037_seed_dashboard_templates", migration037},
+		{"038_fix_events_normalized_data", migration038},
 	}
 
 	// Apply each migration

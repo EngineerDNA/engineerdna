@@ -1,5 +1,5 @@
--- Migration 034: Cleanup PDR-9 Features + Event Normalization + Correlations (PDR-11)
--- Context: PDR-11 consolidates plugin system from 5 types to 3 types
+-- Migration 034: Cleanup Features + Event Normalization + Correlations
+-- Context: Consolidates plugin system from 5 types to 3 types
 --          and keeps features that provide immediate value
 --
 -- What's being removed:

@@ -63,9 +63,12 @@ plugins/
 │   ├── types.go                # Core types
 │   ├── protocol.go             # JSON-RPC helpers
 │   └── sdk.go                  # Plugin server
+├── insights-common/             # Shared AI insights code
 ├── github/                      # Source plugin
 ├── google-sheets-export/        # Destination plugin
-├── ai-insights/                 # Processor plugin
+├── claude-insights/             # Processor plugin (Anthropic)
+├── openai-insights/             # Processor plugin (OpenAI)
+├── ollama-insights/             # Processor plugin (Ollama)
 └── csv-import/                  # Source plugin
 ```
 
@@ -94,7 +97,7 @@ plugins/
 
 ## Quick Start with SDK
 
-See reference implementations in `plugins/github/` and `plugins/csv-import/` for complete examples.
+See reference implementations in `plugins/github/` and `plugins/csv-import/` for source plugins, `plugins/claude-insights/` for processor plugins.
 
 ### Minimal Plugin
 
@@ -355,7 +358,7 @@ Response: {
 **Error handling**: Return partial results + warnings for failed items
 **Config validation**: Check required fields, return sdk.NewConfigError() on failure
 
-See `plugins/github/` and `plugins/ai-insights/` for complete examples.
+See complete examples in plugin directories. For shared code patterns, see `plugins/insights-common/`.
 
 ## Configuration and Secrets
 
@@ -452,7 +455,8 @@ Reference implementations:
 - **plugins/github/** - Source plugin (GitHub API)
 - **plugins/csv-import/** - Source plugin (file parsing)
 - **plugins/google-sheets-export/** - Destination plugin (OAuth + Sheets)
-- **plugins/ai-insights/** - Processor plugin (OpenAI + anonymization)
+- **plugins/claude-insights/** - Processor plugin (Anthropic + anonymization)
+- **plugins/insights-common/** - Shared code for AI insights plugins
 
 ## References
 

@@ -255,7 +255,7 @@ func (s *Service) getEngineersWithRoles() ([]*models.Engineer, error) {
 }
 
 // getRecentScores retrieves the most recent N weeks of performance scores for an engineer
-// Queries metric_values table (post-PDR-9 migration)
+// Queries metric_values table
 func (s *Service) getRecentScores(engineerID string, weeks int) ([]*models.PerformanceScore, error) {
 	// Query total scores from metric_values
 	rows, err := s.db.Query(`

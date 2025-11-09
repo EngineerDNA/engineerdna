@@ -113,6 +113,7 @@ func cmdServe() {
 	forecastingStore := db.NewForecastingStore(database.DB)
 	actionsStore := db.NewActionsStore(database.DB)
 	dashboardStore := db.NewDashboardStore(database.DB)
+	templateStore := db.NewDashboardTemplateStore(database.DB)
 	engineerStore := db.NewEngineerStore(database.DB)
 	healthStore := db.NewHealthStore(database.DB)
 	metricStore := db.NewMetricStore(database.DB)
@@ -142,6 +143,7 @@ func cmdServe() {
 	sentimentAnalyzer := sentiment.NewAnalyzer(contextStore, eventStore)
 	forecastingService := forecasting.NewForecastingService(database.DB, forecastingStore, planningStore, scoringStore, metricStore, goalsStore)
 	dashboardService := dashboards.NewService(dashboardStore, scoringStore, eventStore, alertsStore, goalsStore, teamStore)
+	onboardingService := services.NewOnboardingService(settingsStore, templateStore, dashboardStore)
 	metricEngine := services.NewMetricEngine(eventStore, metricStore, attributeStore)
 	correlationEngine := services.NewCorrelationEngine(metricEngine, eventStore, metricStore, attributeStore, correlationStore)
 	ruleInsights := services.NewRuleBasedInsights(metricStore, eventStore, alertsStore, goalsStore)
@@ -224,7 +226,7 @@ func cmdServe() {
 	defer dashboardScheduler.Stop()
 
 	// Initialize API server with frontend
-	server := api.NewServer(database.DB, eventStore, pluginStore, anonStore, auditStore, identityStore, configStore, scheduleStore, exportsStore, scoringStore, teamStore, briefingStore, planningStore, settingsStore, alertsStore, goalsStore, skillsStore, costROIStore, contextStore, forecastingStore, actionsStore, dashboardStore, engineerStore, healthStore, metricStore, attributeStore, correlationStore, manifestStore, executor, metricEngine, correlationEngine, ruleInsights, widgetRegistry, anonService, identityService, scoringService, teamService, promotionService, briefingService, planningService, goalsService, skillsService, costService, roiService, costAnalyzer, contextService, sentimentService, sentimentAnalyzer, forecastingService, sched, cfg, frontendFS, Version, log.Default())
+	server := api.NewServer(database.DB, eventStore, pluginStore, anonStore, auditStore, identityStore, configStore, scheduleStore, exportsStore, scoringStore, teamStore, briefingStore, planningStore, settingsStore, alertsStore, goalsStore, skillsStore, costROIStore, contextStore, forecastingStore, actionsStore, dashboardStore, templateStore, engineerStore, healthStore, metricStore, attributeStore, correlationStore, manifestStore, executor, metricEngine, correlationEngine, ruleInsights, widgetRegistry, anonService, identityService, scoringService, teamService, promotionService, briefingService, planningService, goalsService, skillsService, costService, roiService, costAnalyzer, contextService, sentimentService, sentimentAnalyzer, forecastingService, onboardingService, sched, cfg, frontendFS, Version, log.Default())
 	server.SetupRoutes()
 
 	// Start server

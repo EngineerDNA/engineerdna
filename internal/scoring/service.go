@@ -108,7 +108,7 @@ func (s *ScoringService) CalculateIndividualScore(engineerID string, weekStart t
 		CreatedAt:          time.Now().UTC(),
 	}
 
-	// Store metrics in metric_values table (PDR-9 universal schema)
+	// Store metrics in metric_values table (universal schema)
 	now := time.Now().UTC()
 	dimensions := map[string]interface{}{"engineer_id": engineerID}
 

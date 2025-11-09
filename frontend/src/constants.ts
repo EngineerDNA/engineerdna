@@ -1,20 +1,6 @@
-export const THROUGHPUT_DAYS = 30;
-export const CHART_WIDTH = 500;
-export const CHART_HEIGHT = 300;
-export const DASHBOARD_EVENT_LIMIT = 50;
-export const RECENT_EVENTS_COUNT = 5;
 export const DEFAULT_AUDIT_LOG_LIMIT = 50;
-export const EVENTS_PER_PAGE = 20;
 export const BYTES_PER_KB = 1024;
-export const HIGH_CONFIDENCE_THRESHOLD = 0.8;
-
-// Time constants
-export const HOURS_PER_DAY = 24;
-export const MINUTES_PER_HOUR = 60;
-export const SECONDS_PER_MINUTE = 60;
-export const MILLISECONDS_PER_SECOND = 1000;
-export const MILLISECONDS_PER_DAY =
-  HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MILLISECONDS_PER_SECOND;
+export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // Query constants
 export const QUERY_STALE_TIME_MS = 30000;
@@ -33,4 +19,23 @@ export const WIDGET_DEFAULTS = {
   table: { w: 12, h: 4 },
   status: { w: 6, h: 3 },
   feed: { w: 6, h: 3 },
+  number_card: { w: 3, h: 2 },
+  bar_chart: { w: 6, h: 3 },
+  activity_feed: { w: 6, h: 4 },
+  briefing_tldr: { w: 12, h: 3 },
+  attention_items: { w: 6, h: 4 },
+  talking_points: { w: 6, h: 4 },
+  team_selector: { w: 4, h: 2 },
+  team_member_cards: { w: 12, h: 4 },
+  engineer_table: { w: 12, h: 5 },
+  unresolved_identities: { w: 6, h: 4 },
+  sprint_board: { w: 12, h: 6 },
+  velocity_trend: { w: 8, h: 4 },
+  timeline_estimator: { w: 8, h: 3 },
+  plugin_list: { w: 6, h: 4 },
+  event_stream: { w: 6, h: 5 },
+  alert_list: { w: 6, h: 4 },
+  goal_tracker: { w: 8, h: 5 },
+  cost_breakdown: { w: 6, h: 4 },
+  quick_actions: { w: 4, h: 3 },
 } as const;

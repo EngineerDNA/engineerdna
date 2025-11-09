@@ -8,6 +8,7 @@ import (
 	"github.com/engineerdna/engineerdna/internal/config"
 	"github.com/engineerdna/engineerdna/internal/db"
 	"github.com/engineerdna/engineerdna/internal/identity"
+	"github.com/engineerdna/engineerdna/internal/models"
 	"github.com/engineerdna/engineerdna/internal/seed"
 )
 
@@ -32,7 +33,7 @@ func cmdSeed() {
 	briefingStore := db.NewBriefingsStore(database.DB)
 	planningStore := db.NewPlanningStore(database.DB)
 
-	// PDR-7 stores
+	// Stores
 	alertsStore := db.NewAlertsStore(database.DB)
 	goalsStore := db.NewGoalsStore(database.DB)
 	skillsStore := db.NewSkillsStore(database.DB)
@@ -40,6 +41,8 @@ func cmdSeed() {
 	contextStore := db.NewContextStore(database.DB)
 	forecastingStore := db.NewForecastingStore(database.DB)
 	actionsStore := db.NewActionsStore(database.DB)
+	attributeStore := db.NewAttributeStore(database.DB)
+	metricStore := db.NewMetricStore(database.DB)
 
 	now := time.Now().UTC()
 
@@ -59,7 +62,10 @@ func cmdSeed() {
 		ContextStore:     contextStore,
 		ForecastingStore: forecastingStore,
 		ActionsStore:     actionsStore,
+		AttributeStore:   attributeStore,
+		MetricStore:      metricStore,
 		Now:              now,
+		TeamsByName:      make(map[string]*models.Team),
 		EngineerMap:      make(map[string]seed.EngineerDef),
 		RoleMap:          make(map[string]string),
 	}
@@ -81,6 +87,14 @@ func cmdSeed() {
 		log.Fatalf("Failed to seed events: %v", err)
 	}
 
+	if err := seed.SeedMetrics(data); err != nil {
+		log.Fatalf("Failed to seed metrics: %v", err)
+	}
+
+	if err := seed.SeedAttributes(data); err != nil {
+		log.Fatalf("Failed to seed attributes: %v", err)
+	}
+
 	if err := seed.SeedScores(data); err != nil {
 		log.Fatalf("Failed to seed scores: %v", err)
 	}
@@ -93,7 +107,7 @@ func cmdSeed() {
 		log.Fatalf("Failed to seed sprints: %v", err)
 	}
 
-	// PDR-7 Feature Seed Data
+	// Feature Seed Data
 	alertRuleIDs, alertInstanceIDs := seed.SeedAlerts(data)
 	goalIDs, milestoneCount, progressLogCount := seed.SeedGoals(data)
 	skillIDs, engineerSkillCount, evidenceCount := seed.SeedSkills(data)
@@ -108,14 +122,16 @@ func cmdSeed() {
 	fmt.Println("========================================")
 	fmt.Println("\nV1.0 Core Features:")
 	fmt.Printf("  - 4 roles (Junior, Mid, Senior, Staff)\n")
-	fmt.Printf("  - 4 teams (Engineering, Backend, Frontend, Platform)\n")
-	fmt.Printf("  - 10 engineers with realistic profiles\n")
-	fmt.Printf("  - Events over 8 weeks\n")
+	fmt.Printf("  - 8 teams across 3-level hierarchy\n")
+	fmt.Printf("  - 50 engineers with realistic profiles and distribution\n")
+	fmt.Printf("  - Events over 12 months (~45,000 events)\n")
+	fmt.Printf("  - Computed metrics (engineer, team, org levels)\n")
+	fmt.Printf("  - Entity attributes (team sizes, costs, locations)\n")
 	fmt.Printf("  - Performance scores\n")
 	fmt.Printf("  - Team performance scores\n")
 	fmt.Printf("  - 3 weekly briefings\n")
 	fmt.Printf("  - Sprints and stories\n")
-	fmt.Println("\nPDR-7 Advanced Features:")
+	fmt.Println("\nAdvanced Features:")
 	fmt.Printf("  - %d alert rules and %d alert instances\n", len(alertRuleIDs), len(alertInstanceIDs))
 	fmt.Printf("  - %d goals with %d milestones and %d progress logs\n", len(goalIDs), milestoneCount, progressLogCount)
 	fmt.Printf("  - %d skills tracked across %d engineer skill assignments with %d evidence entries\n", len(skillIDs), engineerSkillCount, evidenceCount)

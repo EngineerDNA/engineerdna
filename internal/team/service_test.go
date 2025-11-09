@@ -182,7 +182,7 @@ func TestCalculateTeamScore_WithMembers(t *testing.T) {
 
 	// Create engineers
 	_, err = db.Exec(`
-		INSERT INTO engineers (id, name, identifiers) VALUES
+		INSERT INTO engineers (id, canonical_name, identifiers) VALUES
 		('eng1', 'Alice Smith', '{}'),
 		('eng2', 'Bob Jones', '{}')
 	`)

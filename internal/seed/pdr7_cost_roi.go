@@ -12,7 +12,7 @@ import (
 func SeedCostROI(data *SeedData) (featureIDs []string, roiCount int) {
 	fmt.Println("\n13. Creating cost/ROI analysis data...")
 
-	// Cost Configuration - use entity_attributes (PDR-9 schema)
+	// Cost Configuration - use entity_attributes
 	costAttr := &models.EntityAttribute{
 		EntityType:    "org",
 		EntityID:      "default",

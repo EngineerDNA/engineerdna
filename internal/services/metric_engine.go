@@ -255,7 +255,7 @@ func (e *MetricEngine) calculateRatio(spec CalculationSpec, start, end time.Time
 func (e *MetricEngine) calculateFormula(spec CalculationSpec, start, end time.Time) (float64, map[string]interface{}, error) {
 	// For now, just return 0 - formula parsing would require a full expression evaluator
 	// This is a placeholder for future enhancement
-	return 0, nil, fmt.Errorf("formula calculation is planned for v1.4.0 - use count, duration_avg, or ratio types")
+	return 0, nil, fmt.Errorf("formula calculation is planned - use count, duration_avg, or ratio types")
 }
 
 // applyFilters applies custom filters to events

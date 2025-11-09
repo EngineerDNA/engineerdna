@@ -16,7 +16,7 @@ func NewEngineerStore(db *sql.DB) *EngineerStore {
 // GetEngineerName retrieves an engineer's name by ID
 func (s *EngineerStore) GetEngineerName(id string) (string, error) {
 	var name string
-	err := s.db.QueryRow("SELECT name FROM engineers WHERE id = ?", id).Scan(&name)
+	err := s.db.QueryRow("SELECT canonical_name FROM engineers WHERE id = ?", id).Scan(&name)
 	if err == sql.ErrNoRows {
 		return "", fmt.Errorf("engineer not found: %s", id)
 	}
@@ -53,12 +53,17 @@ func (s *EngineerStore) GetPerformanceTable(limit, offset int, sortBy string) ([
 			e.id,
 			e.canonical_name as name,
 			e.email,
-			COALESCE(ps.total_score, 0) as score,
+			COALESCE(mv.value, 0) as score,
 			COUNT(DISTINCT ev.id) as pr_count
 		FROM engineers e
-		LEFT JOIN performance_scores ps ON e.id = ps.engineer_id
-		LEFT JOIN events ev ON e.email = ev.actor AND ev.type = 'pull_request'
-		GROUP BY e.id, e.canonical_name, e.email, ps.total_score
+		LEFT JOIN (
+			SELECT dimensions, value,
+				ROW_NUMBER() OVER (PARTITION BY dimensions ORDER BY created_at DESC) as rn
+			FROM metric_values
+			WHERE metric_name = 'engineer_total_score'
+		) mv ON mv.dimensions LIKE '%"engineer_id":"' || e.id || '"%' AND mv.rn = 1
+		LEFT JOIN events ev ON e.id = ev.engineer_id AND ev.type = 'pull_request'
+		GROUP BY e.id, e.canonical_name, e.email, mv.value
 		ORDER BY ` + sortBy + ` DESC
 		LIMIT ? OFFSET ?
 	`

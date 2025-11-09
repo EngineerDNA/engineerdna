@@ -54,6 +54,7 @@ type Server struct {
 	forecastingStore   *db.ForecastingStore
 	actionsStore       *db.ActionsStore
 	dashboardStore     *db.DashboardStore
+	templateStore      *db.DashboardTemplateStore
 	engineerStore      *db.EngineerStore
 	healthStore        *db.HealthStore
 	metricStore        *db.MetricStore
@@ -80,6 +81,7 @@ type Server struct {
 	sentimentService   *sentiment.Service
 	sentimentAnalyzer  *sentiment.Analyzer
 	forecastingService *forecasting.ForecastingService
+	onboardingService  *services.OnboardingService
 	scheduler          *scheduler.Scheduler
 	config             *config.Config
 	frontendFS         fs.FS
@@ -112,6 +114,7 @@ func NewServer(
 	forecastingStore *db.ForecastingStore,
 	actionsStore *db.ActionsStore,
 	dashboardStore *db.DashboardStore,
+	templateStore *db.DashboardTemplateStore,
 	engineerStore *db.EngineerStore,
 	healthStore *db.HealthStore,
 	metricStore *db.MetricStore,
@@ -139,6 +142,7 @@ func NewServer(
 	sentimentService *sentiment.Service,
 	sentimentAnalyzer *sentiment.Analyzer,
 	forecastingService *forecasting.ForecastingService,
+	onboardingService *services.OnboardingService,
 	sched *scheduler.Scheduler,
 	cfg *config.Config,
 	frontendFS fs.FS,
@@ -168,6 +172,7 @@ func NewServer(
 		forecastingStore:   forecastingStore,
 		actionsStore:       actionsStore,
 		dashboardStore:     dashboardStore,
+		templateStore:      templateStore,
 		engineerStore:      engineerStore,
 		healthStore:        healthStore,
 		metricStore:        metricStore,
@@ -194,6 +199,7 @@ func NewServer(
 		sentimentService:   sentimentService,
 		sentimentAnalyzer:  sentimentAnalyzer,
 		forecastingService: forecastingService,
+		onboardingService:  onboardingService,
 		scheduler:          sched,
 		config:             cfg,
 		frontendFS:         frontendFS,

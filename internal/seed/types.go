@@ -26,11 +26,13 @@ type SeedData struct {
 	ForecastingStore *db.ForecastingStore
 	ActionsStore     *db.ActionsStore
 	AttributeStore   *db.AttributeStore
+	MetricStore      *db.MetricStore
 	Now              time.Time
 	EngineeringTeam  *models.Team
 	BackendTeam      *models.Team
 	FrontendTeam     *models.Team
 	PlatformTeam     *models.Team
+	TeamsByName      map[string]*models.Team
 	EngineerIDs      []string
 	EngineerMap      map[string]EngineerDef
 	RoleMap          map[string]string

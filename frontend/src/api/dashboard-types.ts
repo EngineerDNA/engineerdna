@@ -1,11 +1,37 @@
-// Dashboard System Types (PDR-8)
+// Dashboard System Types
 
 export interface Widget {
   id: string;
-  type: 'number' | 'timeseries' | 'bar' | 'table' | 'status' | 'feed';
+  type:
+    | 'number'
+    | 'timeseries'
+    | 'bar'
+    | 'table'
+    | 'status'
+    | 'feed'
+    | 'number_card'
+    | 'bar_chart'
+    | 'activity_feed'
+    | 'briefing_tldr'
+    | 'attention_items'
+    | 'talking_points'
+    | 'team_selector'
+    | 'team_member_cards'
+    | 'engineer_table'
+    | 'unresolved_identities'
+    | 'sprint_board'
+    | 'velocity_trend'
+    | 'timeline_estimator'
+    | 'plugin_list'
+    | 'event_stream'
+    | 'alert_list'
+    | 'goal_tracker'
+    | 'cost_breakdown'
+    | 'quick_actions';
   title: string;
   data_source: string;
   query_params?: Record<string, string>;
+  config?: Record<string, unknown>;
   visualization_config?: VisualizationConfig;
   position: {
     x: number;

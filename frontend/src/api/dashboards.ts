@@ -54,7 +54,7 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 export const dashboardsApi = {
-  // Dashboards (PDR-8)
+  // Dashboards
   getDashboards: (params?: {
     persona?: string;
     templates?: boolean;

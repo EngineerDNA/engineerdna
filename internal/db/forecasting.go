@@ -59,7 +59,7 @@ func (s *ForecastingStore) CreateForecast(forecast *models.Forecast) error {
 
 func (s *ForecastingStore) GetForecast(id string) (*models.Forecast, error) {
 	var forecast models.Forecast
-	var predictedDate, expiresAt sql.NullString
+	var predictedDate, expiresAt, createdAtStr sql.NullString
 
 	err := s.db.QueryRow(`
 		SELECT id, forecast_type, entity_type, entity_id, time_horizon,
@@ -72,7 +72,7 @@ func (s *ForecastingStore) GetForecast(id string) (*models.Forecast, error) {
 		&forecast.TimeHorizon, &forecast.PredictedValue, &predictedDate,
 		&forecast.ConfidencePercentage, &forecast.ConfidenceIntervalLow,
 		&forecast.ConfidenceIntervalHigh, &forecast.ModelType, &forecast.InputData,
-		&forecast.Assumptions, &forecast.CreatedAt, &expiresAt,
+		&forecast.Assumptions, &createdAtStr, &expiresAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -82,12 +82,15 @@ func (s *ForecastingStore) GetForecast(id string) (*models.Forecast, error) {
 		return nil, fmt.Errorf("failed to get forecast: %w", err)
 	}
 
+	if createdAtStr.Valid {
+		forecast.CreatedAt, _ = parseTimestamp(createdAtStr.String)
+	}
 	if predictedDate.Valid {
-		pd, _ := time.Parse(time.RFC3339, predictedDate.String)
+		pd, _ := parseTimestamp(predictedDate.String)
 		forecast.PredictedDate = &pd
 	}
 	if expiresAt.Valid {
-		ea, _ := time.Parse(time.RFC3339, expiresAt.String)
+		ea, _ := parseTimestamp(expiresAt.String)
 		forecast.ExpiresAt = &ea
 	}
 
@@ -153,25 +156,28 @@ func (s *ForecastingStore) ListForecasts(entityType, entityID, forecastType stri
 	var forecasts []*models.Forecast
 	for rows.Next() {
 		var forecast models.Forecast
-		var predictedDate, expiresAt sql.NullString
+		var predictedDate, expiresAt, createdAtStr sql.NullString
 
 		err := rows.Scan(
 			&forecast.ID, &forecast.ForecastType, &forecast.EntityType, &forecast.EntityID,
 			&forecast.TimeHorizon, &forecast.PredictedValue, &predictedDate,
 			&forecast.ConfidencePercentage, &forecast.ConfidenceIntervalLow,
 			&forecast.ConfidenceIntervalHigh, &forecast.ModelType, &forecast.InputData,
-			&forecast.Assumptions, &forecast.CreatedAt, &expiresAt,
+			&forecast.Assumptions, &createdAtStr, &expiresAt,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan forecast: %w", err)
 		}
 
+		if createdAtStr.Valid {
+			forecast.CreatedAt, _ = parseTimestamp(createdAtStr.String)
+		}
 		if predictedDate.Valid {
-			pd, _ := time.Parse(time.RFC3339, predictedDate.String)
+			pd, _ := parseTimestamp(predictedDate.String)
 			forecast.PredictedDate = &pd
 		}
 		if expiresAt.Valid {
-			ea, _ := time.Parse(time.RFC3339, expiresAt.String)
+			ea, _ := parseTimestamp(expiresAt.String)
 			forecast.ExpiresAt = &ea
 		}
 
@@ -214,6 +220,7 @@ func (s *ForecastingStore) CreateScenario(scenario *models.Scenario) error {
 
 func (s *ForecastingStore) GetScenario(id string) (*models.Scenario, error) {
 	var scenario models.Scenario
+	var createdAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, scenario_name, scenario_type, entity_type, entity_id,
@@ -223,7 +230,7 @@ func (s *ForecastingStore) GetScenario(id string) (*models.Scenario, error) {
 		&scenario.ID, &scenario.ScenarioName, &scenario.ScenarioType,
 		&scenario.EntityType, &scenario.EntityID, &scenario.Description,
 		&scenario.Parameters, &scenario.BaselineForecastID, &scenario.CreatedBy,
-		&scenario.CreatedAt,
+		&createdAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -232,6 +239,8 @@ func (s *ForecastingStore) GetScenario(id string) (*models.Scenario, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get scenario: %w", err)
 	}
+
+	scenario.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 	return &scenario, nil
 }
@@ -285,15 +294,17 @@ func (s *ForecastingStore) ListScenarios(entityType, entityID string, limit, off
 	var scenarios []*models.Scenario
 	for rows.Next() {
 		var scenario models.Scenario
+		var createdAtStr string
 		err := rows.Scan(
 			&scenario.ID, &scenario.ScenarioName, &scenario.ScenarioType,
 			&scenario.EntityType, &scenario.EntityID, &scenario.Description,
 			&scenario.Parameters, &scenario.BaselineForecastID, &scenario.CreatedBy,
-			&scenario.CreatedAt,
+			&createdAtStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan scenario: %w", err)
 		}
+		scenario.CreatedAt, _ = parseTimestamp(createdAtStr)
 		scenarios = append(scenarios, &scenario)
 	}
 
@@ -355,13 +366,15 @@ func (s *ForecastingStore) GetScenarioResults(scenarioID string, limit int) ([]*
 	var results []*models.ScenarioResult
 	for rows.Next() {
 		var result models.ScenarioResult
+		var computedAtStr string
 		err := rows.Scan(
 			&result.ID, &result.ScenarioID, &result.MetricName, &result.PredictedValue,
-			&result.DifferenceFromBaseline, &result.Impact, &result.ComputedAt,
+			&result.DifferenceFromBaseline, &result.Impact, &computedAtStr,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan scenario result: %w", err)
 		}
+		result.ComputedAt, _ = parseTimestamp(computedAtStr)
 		results = append(results, &result)
 	}
 
@@ -463,19 +476,22 @@ func (s *ForecastingStore) ListRiskPredictions(entityType, entityID, riskType st
 	var risks []*models.RiskPrediction
 	for rows.Next() {
 		var risk models.RiskPrediction
-		var validUntil sql.NullString
+		var validUntil, predictedAtStr sql.NullString
 
 		err := rows.Scan(
 			&risk.ID, &risk.RiskType, &risk.EntityType, &risk.EntityID, &risk.RiskScore,
 			&risk.ProbabilityPercentage, &risk.ImpactSeverity, &risk.ContributingFactors,
-			&risk.MitigationSuggestions, &risk.PredictedAt, &validUntil,
+			&risk.MitigationSuggestions, &predictedAtStr, &validUntil,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan risk prediction: %w", err)
 		}
 
+		if predictedAtStr.Valid {
+			risk.PredictedAt, _ = parseTimestamp(predictedAtStr.String)
+		}
 		if validUntil.Valid {
-			vu, _ := time.Parse(time.RFC3339, validUntil.String)
+			vu, _ := parseTimestamp(validUntil.String)
 			risk.ValidUntil = &vu
 		}
 

@@ -9,14 +9,6 @@ export function useSchedules() {
   });
 }
 
-export function useSchedule(id: string) {
-  return useQuery({
-    queryKey: ['schedules', id],
-    queryFn: () => api.getSchedule(id),
-    enabled: !!id,
-  });
-}
-
 export function useCreateSchedule() {
   const queryClient = useQueryClient();
 

@@ -1,16 +1,6 @@
 // Team and Organization Types
 
-export interface Engineer {
-  id: string;
-  name: string;
-  email?: string;
-  manager?: string;
-  role_id?: string;
-  identifiers: Record<string, string>;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import type { Engineer } from './types';
 
 export interface Team {
   id: string;

@@ -172,31 +172,33 @@ Use Chrome MCP tools to navigate and verify:
 
 **Plugin Configuration Flow:**
 ```yaml
-1. Navigate to plugins page
-2. Click "Configure" on a plugin
-3. Fill in configuration fields
-4. For secret fields, verify masked input
-5. Click Save
-6. Verify success message
-7. Reload page
-8. Verify config persisted
+1. Navigate to Settings page
+2. Click "Plugins" tab
+3. Click "Configure" on a plugin
+4. Fill in configuration fields
+5. For secret fields, verify masked input
+6. Click Save
+7. Verify success message
+8. Reload page
+9. Verify config persisted
 ```
 
 **Event Viewing Flow:**
 ```yaml
-1. Navigate to events page
-2. Verify events list loads
-3. Click on an event
-4. Verify event details modal opens
-5. Verify all event data displays
-6. Close modal
-7. Test filtering by type
-8. Test pagination
+1. Navigate to Dashboards page
+2. Open dashboard with Event Stream widget
+3. Verify events list loads in widget
+4. Click on an event
+5. Verify event detail drawer opens
+6. Verify all event data displays
+7. Close drawer
+8. Test filtering by type
+9. Test pagination
 ```
 
 **Metrics Dashboard Flow:**
 ```yaml
-1. Navigate to dashboard
+1. Navigate to Dashboards page
 2. Verify metric cards load with data
 3. Verify charts render (no errors)
 4. Test date range selector

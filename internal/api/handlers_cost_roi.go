@@ -43,7 +43,7 @@ func (s *Server) listCostConfiguration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get cost attributes from entity_attributes (PDR-9 schema)
+	// Get cost attributes from entity_attributes
 	filters := make(map[string]interface{})
 	if entityType != "" {
 		filters["entity_type"] = entityType
@@ -97,7 +97,7 @@ func (s *Server) createCostConfiguration(w http.ResponseWriter, r *http.Request)
 		validUntil = &t
 	}
 
-	// Create entity attribute directly (PDR-9 schema)
+	// Create entity attribute directly
 	attr := &models.EntityAttribute{
 		EntityType:    req.EntityType,
 		EntityID:      req.EntityID,
@@ -131,7 +131,7 @@ func (s *Server) handleTeamCost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get team cost from entity_attributes table (PDR-9 migration)
+	// Get team cost from entity_attributes table
 	// This could be a direct team cost attribute OR sum of member costs
 	costAttr, err := s.attributeStore.GetCurrentAttributeValue("team", teamID, "monthly_cost")
 	if err != nil {
@@ -169,7 +169,7 @@ func (s *Server) handleEngineerCost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get cost from entity_attributes (PDR-9 schema)
+	// Get cost from entity_attributes
 	costAttr, err := s.attributeStore.GetEngineerCost(engineerID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get engineer cost", err)

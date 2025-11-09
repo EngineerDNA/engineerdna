@@ -306,7 +306,7 @@ func (s *Server) handlePerformanceIndividual(w http.ResponseWriter, r *http.Requ
 		endDate = parsed
 	}
 
-	// Get scores from metric_values (PDR-9 schema)
+	// Get scores from metric_values
 	metrics, err := s.metricStore.GetEngineerScores(engineerID, startDate, endDate, 100)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get performance scores", err)

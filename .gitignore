@@ -78,7 +78,6 @@ coverage.html
 /plugins/*/ollama-insights
 /plugins/*/csv-import
 /plugins/*/google-sheets-export
-/plugins/*/ai-insights
 /plugins/*/pdf-export
 /plugins/*/markdown-export
 

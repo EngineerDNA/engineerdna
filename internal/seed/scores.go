@@ -60,20 +60,39 @@ func SeedScores(data *SeedData) error {
 			collaborationScore := totalScore * 0.15
 			impactScore := totalScore * 0.1
 
-			scoreID := uuid.New().String()
+			// Store scores in metric_values (new schema)
+			dimensions := fmt.Sprintf(`{"engineer_id":"%s"}`, engineerID)
+
+			// Total score
 			_, err := data.Database.DB.Exec(`
-				INSERT INTO performance_scores (
-					id, engineer_id, week_start, total_score,
-					throughput_score, quality_score, speed_score,
-					collaboration_score, impact_score, raw_metrics, created_at
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, scoreID, engineerID, weekStart, totalScore,
-				throughputScore, qualityScore, speedScore,
-				collaborationScore, impactScore, "{}", data.Now)
+				INSERT INTO metric_values (id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, uuid.New().String(), "engineer_total_score", "scoring_system", weekStart.Format("2006-01-02"), "weekly", totalScore, "score", dimensions, data.Now.Format("2006-01-02T15:04:05Z"))
 
 			if err != nil {
-				log.Printf("Warning: Failed to create performance score: %v", err)
+				log.Printf("Warning: Failed to create total score: %v", err)
 			}
+
+			// Component scores
+			componentScores := map[string]float64{
+				"engineer_throughput_score":    throughputScore,
+				"engineer_quality_score":       qualityScore,
+				"engineer_speed_score":         speedScore,
+				"engineer_collaboration_score": collaborationScore,
+				"engineer_impact_score":        impactScore,
+			}
+
+			for metricName, value := range componentScores {
+				_, err := data.Database.DB.Exec(`
+					INSERT INTO metric_values (id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				`, uuid.New().String(), metricName, "scoring_system", weekStart.Format("2006-01-02"), "weekly", value, "score", dimensions, data.Now.Format("2006-01-02T15:04:05Z"))
+
+				if err != nil {
+					log.Printf("Warning: Failed to create %s: %v", metricName, err)
+				}
+			}
+
 			scoreCounter++
 		}
 	}
@@ -109,45 +128,40 @@ func SeedScores(data *SeedData) error {
 				continue
 			}
 
-			// Aggregate scores from team members
-			var totalScore, throughputScore, qualityScore, speedScore, collaborationScore, impactScore float64
+			// Aggregate scores from team members (from metric_values)
+			var totalScore float64
 			var count int
 
 			for _, memberID := range memberIDs {
-				var score, tp, qual, spd, collab, imp float64
+				dimensions := fmt.Sprintf(`{"engineer_id":"%s"}`, memberID)
+				timestamp := weekStart.Format("2006-01-02")
+
+				// Get total score
+				var score float64
 				err := data.Database.DB.QueryRow(`
-					SELECT total_score, throughput_score, quality_score, speed_score,
-					       collaboration_score, impact_score
-					FROM performance_scores
-					WHERE engineer_id = ? AND week_start = ?
-				`, memberID, weekStart).Scan(&score, &tp, &qual, &spd, &collab, &imp)
+					SELECT value FROM metric_values
+					WHERE metric_name = 'engineer_total_score'
+					AND dimensions = ? AND timestamp = ?
+				`, dimensions, timestamp).Scan(&score)
 
 				if err == nil {
 					totalScore += score
-					throughputScore += tp
-					qualityScore += qual
-					speedScore += spd
-					collaborationScore += collab
-					impactScore += imp
 					count++
 				}
 			}
 
 			if count > 0 {
-				// Calculate team averages
-				teamScoreID := uuid.New().String()
+				// Store team average scores in metric_values
+				avgTotalScore := totalScore / float64(count)
+				teamDimensions := fmt.Sprintf(`{"team_id":"%s","member_count":%d}`, team.id, count)
+
 				_, err := data.Database.DB.Exec(`
-					INSERT INTO team_performance_scores (
-						id, team_id, week_start, total_score,
-						throughput_score, quality_score, speed_score,
-						collaboration_score, impact_score, member_count, created_at
-					) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-				`, teamScoreID, team.id, weekStart, totalScore/float64(count),
-					throughputScore/float64(count), qualityScore/float64(count), speedScore/float64(count),
-					collaborationScore/float64(count), impactScore/float64(count), count, data.Now)
+					INSERT INTO metric_values (id, metric_name, source, timestamp, granularity, value, unit, dimensions, created_at)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				`, uuid.New().String(), "team_total_score", "scoring_system", weekStart.Format("2006-01-02"), "weekly", avgTotalScore, "score", teamDimensions, data.Now.Format("2006-01-02T15:04:05Z"))
 
 				if err != nil {
-					log.Printf("Warning: Failed to create team performance score: %v", err)
+					log.Printf("Warning: Failed to create team score: %v", err)
 				} else {
 					teamScoreCounter++
 				}

@@ -35,6 +35,8 @@ import type {
   AlertChannel,
   LiveMetrics,
   SprintBurndownData,
+  Dashboard,
+  DashboardTemplate,
 } from './types';
 import type { EngineerScoresResponse } from '../types/metrics';
 import { DEFAULT_AUDIT_LOG_LIMIT } from '../constants';
@@ -453,4 +455,33 @@ export const api = {
   getTodayActivity: () => {
     return fetchAPI<{ events: Event[] }>(`/activity/today`);
   },
+
+  // Dashboard Templates
+  getDashboardTemplates: (role?: string) => {
+    const params = role ? `?role=${role}` : '';
+    return fetchAPI<{ templates: DashboardTemplate[] }>(`/dashboard-templates${params}`);
+  },
+  getDashboardTemplate: (id: string) => fetchAPI<DashboardTemplate>(`/dashboard-templates/${id}`),
+  createDashboardFromTemplate: (templateId: string, name?: string) =>
+    fetchAPI<Dashboard>(`/dashboards/from-template/${templateId}`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  // Settings - Role
+  getUserRole: () => fetchAPI<{ role: string }>('/settings/role'),
+  setUserRole: (role: string) =>
+    fetchAPI<{ message: string }>('/settings/role', {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+
+  // Settings - Primary Dashboard
+  getPrimaryDashboard: () =>
+    fetchAPI<{ primary_dashboard_id: string | null }>('/settings/primary-dashboard'),
+  setPrimaryDashboard: (dashboardId: string) =>
+    fetchAPI<{ message: string }>('/settings/primary-dashboard', {
+      method: 'PUT',
+      body: JSON.stringify({ dashboard_id: dashboardId }),
+    }),
 };

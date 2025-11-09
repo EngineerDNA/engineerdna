@@ -1,5 +1,5 @@
 -- Migration 025: Dashboard System
--- Dashboard Builder & Visualization System for v1.2.0 (PDR-8)
+-- Dashboard Builder & Visualization System
 
 -- Dashboard definitions
 CREATE TABLE IF NOT EXISTS dashboards (

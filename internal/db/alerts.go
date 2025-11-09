@@ -45,6 +45,7 @@ func (s *AlertsStore) GetAlertRule(id string) (*models.AlertRule, error) {
 	var rule models.AlertRule
 	var thresholdValue sql.NullFloat64
 	var thresholdOperator, targetEntity, targetID, description sql.NullString
+	var createdAtStr, updatedAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, name, description, alert_type, enabled,
@@ -54,7 +55,7 @@ func (s *AlertsStore) GetAlertRule(id string) (*models.AlertRule, error) {
 		WHERE id = ?
 	`, id).Scan(&rule.ID, &rule.Name, &description, &rule.AlertType, &rule.Enabled,
 		&thresholdValue, &thresholdOperator, &rule.Severity,
-		&targetEntity, &targetID, &rule.CreatedAt, &rule.UpdatedAt)
+		&targetEntity, &targetID, &createdAtStr, &updatedAtStr)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -79,6 +80,10 @@ func (s *AlertsStore) GetAlertRule(id string) (*models.AlertRule, error) {
 	if targetID.Valid {
 		rule.TargetID = targetID.String
 	}
+
+	// Parse timestamps
+	rule.CreatedAt, _ = parseTimestamp(createdAtStr)
+	rule.UpdatedAt, _ = parseTimestamp(updatedAtStr)
 
 	return &rule, nil
 }
@@ -130,10 +135,11 @@ func (s *AlertsStore) ListAlertRules(enabledOnly bool, limit, offset int) ([]*mo
 		var rule models.AlertRule
 		var thresholdValue sql.NullFloat64
 		var thresholdOperator, targetEntity, targetID, description sql.NullString
+		var createdAtStr, updatedAtStr string
 
 		err := rows.Scan(&rule.ID, &rule.Name, &description, &rule.AlertType, &rule.Enabled,
 			&thresholdValue, &thresholdOperator, &rule.Severity,
-			&targetEntity, &targetID, &rule.CreatedAt, &rule.UpdatedAt)
+			&targetEntity, &targetID, &createdAtStr, &updatedAtStr)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan alert rule: %w", err)
 		}
@@ -154,6 +160,10 @@ func (s *AlertsStore) ListAlertRules(enabledOnly bool, limit, offset int) ([]*mo
 		if targetID.Valid {
 			rule.TargetID = targetID.String
 		}
+
+		// Parse timestamps
+		rule.CreatedAt, _ = parseTimestamp(createdAtStr)
+		rule.UpdatedAt, _ = parseTimestamp(updatedAtStr)
 
 		rules = append(rules, &rule)
 	}
@@ -345,7 +355,7 @@ func (s *AlertsStore) CreateAlertInstance(instance *models.AlertInstance) error 
 func (s *AlertsStore) GetAlertInstance(id string) (*models.AlertInstance, error) {
 	var instance models.AlertInstance
 	var entityType, entityID, context sql.NullString
-	var acknowledgedAt, snoozedUntil, dismissedAt, resolvedAt sql.NullString
+	var firedAtStr, acknowledgedAt, snoozedUntil, dismissedAt, resolvedAt sql.NullString
 	var acknowledgedBy, dismissedBy sql.NullString
 
 	err := s.db.QueryRow(`
@@ -356,7 +366,7 @@ func (s *AlertsStore) GetAlertInstance(id string) (*models.AlertInstance, error)
 		FROM alert_instances
 		WHERE id = ?
 	`, id).Scan(&instance.ID, &instance.RuleID, &instance.Title, &instance.Message, &instance.Severity,
-		&entityType, &entityID, &context, &instance.FiredAt,
+		&entityType, &entityID, &context, &firedAtStr,
 		&acknowledgedAt, &acknowledgedBy, &snoozedUntil,
 		&dismissedAt, &dismissedBy, &resolvedAt)
 
@@ -376,8 +386,13 @@ func (s *AlertsStore) GetAlertInstance(id string) (*models.AlertInstance, error)
 	if context.Valid {
 		instance.Context = context.String
 	}
+
+	// Parse timestamps
+	if firedAtStr.Valid {
+		instance.FiredAt, _ = parseTimestamp(firedAtStr.String)
+	}
 	if acknowledgedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, acknowledgedAt.String)
+		t, _ := parseTimestamp(acknowledgedAt.String)
 		instance.AcknowledgedAt = &t
 	}
 	if acknowledgedBy.Valid {
@@ -385,11 +400,11 @@ func (s *AlertsStore) GetAlertInstance(id string) (*models.AlertInstance, error)
 		instance.AcknowledgedBy = &ab
 	}
 	if snoozedUntil.Valid {
-		t, _ := time.Parse(time.RFC3339, snoozedUntil.String)
+		t, _ := parseTimestamp(snoozedUntil.String)
 		instance.SnoozedUntil = &t
 	}
 	if dismissedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, dismissedAt.String)
+		t, _ := parseTimestamp(dismissedAt.String)
 		instance.DismissedAt = &t
 	}
 	if dismissedBy.Valid {
@@ -397,7 +412,7 @@ func (s *AlertsStore) GetAlertInstance(id string) (*models.AlertInstance, error)
 		instance.DismissedBy = &db
 	}
 	if resolvedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, resolvedAt.String)
+		t, _ := parseTimestamp(resolvedAt.String)
 		instance.ResolvedAt = &t
 	}
 
@@ -482,11 +497,11 @@ func (s *AlertsStore) ListAlertInstances(filters map[string]string, limit, offse
 	for rows.Next() {
 		var instance models.AlertInstance
 		var entityType, entityID, context sql.NullString
-		var acknowledgedAt, snoozedUntil, dismissedAt, resolvedAt sql.NullString
+		var firedAtStr, acknowledgedAt, snoozedUntil, dismissedAt, resolvedAt sql.NullString
 		var acknowledgedBy, dismissedBy sql.NullString
 
 		err := rows.Scan(&instance.ID, &instance.RuleID, &instance.Title, &instance.Message, &instance.Severity,
-			&entityType, &entityID, &context, &instance.FiredAt,
+			&entityType, &entityID, &context, &firedAtStr,
 			&acknowledgedAt, &acknowledgedBy, &snoozedUntil,
 			&dismissedAt, &dismissedBy, &resolvedAt)
 		if err != nil {
@@ -502,8 +517,13 @@ func (s *AlertsStore) ListAlertInstances(filters map[string]string, limit, offse
 		if context.Valid {
 			instance.Context = context.String
 		}
+
+		// Parse timestamps
+		if firedAtStr.Valid {
+			instance.FiredAt, _ = parseTimestamp(firedAtStr.String)
+		}
 		if acknowledgedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, acknowledgedAt.String)
+			t, _ := parseTimestamp(acknowledgedAt.String)
 			instance.AcknowledgedAt = &t
 		}
 		if acknowledgedBy.Valid {
@@ -511,11 +531,11 @@ func (s *AlertsStore) ListAlertInstances(filters map[string]string, limit, offse
 			instance.AcknowledgedBy = &ab
 		}
 		if snoozedUntil.Valid {
-			t, _ := time.Parse(time.RFC3339, snoozedUntil.String)
+			t, _ := parseTimestamp(snoozedUntil.String)
 			instance.SnoozedUntil = &t
 		}
 		if dismissedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, dismissedAt.String)
+			t, _ := parseTimestamp(dismissedAt.String)
 			instance.DismissedAt = &t
 		}
 		if dismissedBy.Valid {
@@ -523,7 +543,7 @@ func (s *AlertsStore) ListAlertInstances(filters map[string]string, limit, offse
 			instance.DismissedBy = &db
 		}
 		if resolvedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, resolvedAt.String)
+			t, _ := parseTimestamp(resolvedAt.String)
 			instance.ResolvedAt = &t
 		}
 
@@ -670,13 +690,17 @@ func (s *AlertsStore) GetAlertDeliveries(instanceID string) ([]*models.AlertDeli
 	var deliveries []*models.AlertDelivery
 	for rows.Next() {
 		var delivery models.AlertDelivery
+		var deliveredAtStr string
 		var errorMessage sql.NullString
 
 		err := rows.Scan(&delivery.ID, &delivery.InstanceID, &delivery.ChannelType,
-			&delivery.DeliveredAt, &delivery.Status, &errorMessage)
+			&deliveredAtStr, &delivery.Status, &errorMessage)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan alert delivery: %w", err)
 		}
+
+		// Parse timestamp
+		delivery.DeliveredAt, _ = parseTimestamp(deliveredAtStr)
 
 		if errorMessage.Valid {
 			em := errorMessage.String

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
 import type { ExportSchedule, Plugin } from '../api/types';
 
 interface ScheduleFormProps {

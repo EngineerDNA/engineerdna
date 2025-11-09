@@ -15,10 +15,11 @@ func NewHealthStore(db *sql.DB) *HealthStore {
 
 // GetSystemHealth retrieves overall system health metrics
 func (s *HealthStore) GetSystemHealth() (avgScore float64, activeAlerts, goalsOffTrack int, err error) {
-	// Get average score from last 7 days
+	// Get average score from last 7 days from metric_values table
 	err = s.db.QueryRow(`
-		SELECT COALESCE(AVG(total_score), 0) FROM performance_scores
-		WHERE created_at >= datetime('now', '-7 days')
+		SELECT COALESCE(AVG(value), 0) FROM metric_values
+		WHERE metric_name IN ('engineer_total_score', 'team_total_score')
+		  AND created_at >= datetime('now', '-7 days')
 	`).Scan(&avgScore)
 	if err != nil && err != sql.ErrNoRows {
 		return 0, 0, 0, fmt.Errorf("failed to calculate average score: %w", err)

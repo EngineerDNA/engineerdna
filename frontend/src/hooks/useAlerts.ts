@@ -45,14 +45,3 @@ export function useDismissAlert() {
     },
   });
 }
-
-export function useResolveAlert() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (alertId: string) => api.resolveAlert(alertId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alerts'] });
-    },
-  });
-}

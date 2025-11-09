@@ -324,6 +324,29 @@ export interface TimelineEstimate {
   assumptions: string[];
 }
 
+// User role types
+export type UserRole = 'ic' | 'manager' | 'director' | 'admin';
+
+export interface DashboardTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  role?: UserRole;
+  category?: string;
+  layout: string;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoleInfo {
+  role: UserRole;
+  name: string;
+  description: string;
+  dashboards: string[];
+  features: string[];
+}
+
 // Re-export all types from split files for backward compatibility
 export type {
   Widget,

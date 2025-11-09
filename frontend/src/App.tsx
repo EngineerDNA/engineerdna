@@ -6,50 +6,44 @@ import { useTheme } from './contexts/ThemeContext';
 import { OnboardingModal } from './components/onboarding-modal';
 import { api } from './api/client';
 
-const DashboardPage = lazy(() =>
-  import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage }))
-);
-const TeamPage = lazy(() =>
-  import('./pages/TeamPage').then((module) => ({ default: module.TeamPage }))
-);
-const PluginsPage = lazy(() =>
-  import('./pages/PluginsPage').then((module) => ({ default: module.PluginsPage }))
-);
-const EventsPage = lazy(() =>
-  import('./pages/EventsPage').then((module) => ({ default: module.EventsPage }))
-);
-const SchedulesPage = lazy(() =>
-  import('./pages/SchedulesPage').then((module) => ({ default: module.SchedulesPage }))
-);
-const SettingsPage = lazy(() =>
-  import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage }))
-);
-const ScorecardPage = lazy(() =>
-  import('./pages/scorecard-page').then((module) => ({ default: module.ScorecardPage }))
-);
-const TeamsPage = lazy(() =>
-  import('./pages/teams-page').then((module) => ({ default: module.TeamsPage }))
-);
-const TeamDetailPage = lazy(() =>
-  import('./pages/team-detail-page').then((module) => ({ default: module.TeamDetailPage }))
-);
-const BriefingPage = lazy(() =>
-  import('./pages/briefing-page').then((module) => ({ default: module.BriefingPage }))
-);
-const PlanningPage = lazy(() =>
-  import('./pages/planning-page').then((module) => ({ default: module.PlanningPage }))
-);
-const AlertsPage = lazy(() =>
-  import('./pages/alerts-page').then((module) => ({ default: module.AlertsPage }))
-);
-const AlertRulesPage = lazy(() =>
-  import('./pages/alert-rules-page').then((module) => ({ default: module.AlertRulesPage }))
-);
-const LiveDashboardPage = lazy(() =>
-  import('./pages/live-dashboard-page').then((module) => ({ default: module.LiveDashboardPage }))
-);
+// Dashboard pages
 const DashboardsPage = lazy(() =>
   import('./pages/dashboards-page').then((module) => ({ default: module.DashboardsPage }))
+);
+const DashboardViewer = lazy(() =>
+  import('./pages/dashboard-viewer').then((module) => ({ default: module.DashboardViewer }))
+);
+
+// Settings page and tabs
+const SettingsPage = lazy(() =>
+  import('./pages/settings-page').then((module) => ({ default: module.SettingsPage }))
+);
+const ProfileTab = lazy(() =>
+  import('./components/settings/profile-tab').then((module) => ({ default: module.ProfileTab }))
+);
+const DashboardsTab = lazy(() =>
+  import('./components/settings/dashboards-tab').then((module) => ({
+    default: module.DashboardsTab,
+  }))
+);
+const PluginsTab = lazy(() =>
+  import('./components/settings/plugins-tab').then((module) => ({ default: module.PluginsTab }))
+);
+const AlertsTab = lazy(() =>
+  import('./components/settings/alerts-tab').then((module) => ({ default: module.AlertsTab }))
+);
+const SchedulesTab = lazy(() =>
+  import('./components/settings/schedules-tab').then((module) => ({
+    default: module.SchedulesTab,
+  }))
+);
+const NotificationsTab = lazy(() =>
+  import('./components/settings/notifications-tab').then((module) => ({
+    default: module.NotificationsTab,
+  }))
+);
+const SystemTab = lazy(() =>
+  import('./components/settings/system-tab').then((module) => ({ default: module.SystemTab }))
 );
 
 const queryClient = new QueryClient({
@@ -94,18 +88,7 @@ function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { to: '/', label: 'Dashboard' },
-    { to: '/live', label: 'Live' },
     { to: '/dashboards', label: 'Dashboards' },
-    { to: '/briefing', label: 'Briefing' },
-    { to: '/alerts', label: 'Alerts' },
-    { to: '/team', label: 'Team' },
-    { to: '/teams', label: 'Teams' },
-    { to: '/scorecard', label: 'Scorecard' },
-    { to: '/planning', label: 'Planning' },
-    { to: '/plugins', label: 'Plugins' },
-    { to: '/events', label: 'Events' },
-    { to: '/schedules', label: 'Schedules' },
     { to: '/settings', label: 'Settings' },
   ];
 
@@ -261,16 +244,18 @@ function Navigation() {
 }
 
 function AppContent() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
   const { data: onboardingStatus, isLoading } = useQuery({
     queryKey: ['onboarding-status'],
     queryFn: api.getOnboardingStatus,
   });
 
   // Show onboarding modal if not completed
-  const shouldShowOnboarding =
-    !isLoading && onboardingStatus && !onboardingStatus.completed && !showOnboarding;
+  const shouldShowOnboarding = !isLoading && onboardingStatus && !onboardingStatus.completed;
+
+  const handleOnboardingComplete = () => {
+    // Modal will automatically close when onboarding status query refetches
+    // The onboarding-modal component already invalidates the query
+  };
 
   return (
     <>
@@ -286,28 +271,48 @@ function AppContent() {
             }
           >
             <Routes>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/live" element={<LiveDashboardPage />} />
+              {/* Default route loads dashboards */}
+              <Route path="/" element={<Navigate to="/dashboards" replace />} />
+
+              {/* Dashboard routes */}
               <Route path="/dashboards" element={<DashboardsPage />} />
-              <Route path="/briefing" element={<BriefingPage />} />
-              <Route path="/alerts" element={<AlertsPage />} />
-              <Route path="/alerts/rules" element={<AlertRulesPage />} />
-              <Route path="/alert-rules" element={<Navigate to="/alerts/rules" replace />} />
-              <Route path="/team" element={<TeamPage />} />
-              <Route path="/teams" element={<TeamsPage />} />
-              <Route path="/teams/:id" element={<TeamDetailPage />} />
-              <Route path="/scorecard" element={<ScorecardPage />} />
-              <Route path="/planning" element={<PlanningPage />} />
-              <Route path="/plugins" element={<PluginsPage />} />
-              <Route path="/events" element={<EventsPage />} />
-              <Route path="/schedules" element={<SchedulesPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/dashboards/:id" element={<DashboardViewer />} />
+
+              {/* Settings with nested tabs */}
+              <Route path="/settings" element={<SettingsPage />}>
+                <Route index element={<Navigate to="profile" replace />} />
+                <Route path="profile" element={<ProfileTab />} />
+                <Route path="dashboards" element={<DashboardsTab />} />
+                <Route path="plugins" element={<PluginsTab />} />
+                <Route path="alerts" element={<AlertsTab />} />
+                <Route path="schedules" element={<SchedulesTab />} />
+                <Route path="notifications" element={<NotificationsTab />} />
+                <Route path="system" element={<SystemTab />} />
+              </Route>
+
+              {/* Redirects for old routes */}
+              <Route path="/live" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/briefing" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/teams" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/teams/:id" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/team" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/scorecard" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/planning" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/alerts" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/alerts/rules" element={<Navigate to="/settings/alerts" replace />} />
+              <Route path="/alert-rules" element={<Navigate to="/settings/alerts" replace />} />
+              <Route path="/plugins" element={<Navigate to="/settings/plugins" replace />} />
+              <Route path="/events" element={<Navigate to="/dashboards" replace />} />
+              <Route path="/schedules" element={<Navigate to="/settings/schedules" replace />} />
+
+              {/* Catch-all redirect */}
+              <Route path="*" element={<Navigate to="/dashboards" replace />} />
             </Routes>
           </Suspense>
         </main>
       </div>
 
-      {shouldShowOnboarding && <OnboardingModal onComplete={() => setShowOnboarding(true)} />}
+      {shouldShowOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
     </>
   );
 }

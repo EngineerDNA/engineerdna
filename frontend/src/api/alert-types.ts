@@ -1,4 +1,4 @@
-// Alert and Monitoring Types (PDR-7)
+// Alert and Monitoring Types
 
 export interface AlertRule {
   id: string;

@@ -39,12 +39,23 @@ func SeedSkills(data *SeedData) (skillIDs []string, engineerSkillCount, evidence
 			Description: fmt.Sprintf("Proficiency in %s", s.name),
 		}
 		if err := data.SkillsStore.CreateSkill(skill); err != nil {
-			log.Printf("Warning: Failed to create skill: %v", err)
-		} else {
-			skillIDs = append(skillIDs, skill.ID)
+			// Skill likely already exists from defaults, skip
+			continue
+		}
+		skillIDs = append(skillIDs, skill.ID)
+	}
+
+	// If no new skills created, get existing skills from database
+	if len(skillIDs) == 0 {
+		existingSkills, _, err := data.SkillsStore.ListSkills("", 0, 100)
+		if err == nil {
+			for _, skill := range existingSkills {
+				skillIDs = append(skillIDs, skill.ID)
+			}
 		}
 	}
-	fmt.Printf("  Created %d skills\n", len(skillIDs))
+
+	fmt.Printf("  Using %d skills (%d newly created)\n", len(skillIDs), len(skills)-len(skillIDs))
 
 	// Engineer Skills
 	for _, engID := range data.EngineerIDs {
@@ -70,22 +81,24 @@ func SeedSkills(data *SeedData) (skillIDs []string, engineerSkillCount, evidence
 	}
 	fmt.Printf("  Created %d engineer skills\n", engineerSkillCount)
 
-	// Skill Evidence
-	for i, engID := range data.EngineerIDs[:5] {
-		for j := 0; j < 3; j++ {
-			evidence := &models.SkillEvidence{
-				EngineerID:     engID,
-				SkillID:        skillIDs[j%len(skillIDs)],
-				EvidenceType:   []string{"pr_complexity", "code_review", "design_doc"}[j%3],
-				EvidenceSource: fmt.Sprintf("event_%d", i*3+j),
-				Strength:       0.7 + float64(i)*0.05,
-				Context:        `{"details": "Strong evidence of skill usage"}`,
-				DetectedAt:     data.Now.AddDate(0, 0, -(i*7 + j)),
-			}
-			if err := data.SkillsStore.CreateSkillEvidence(evidence); err != nil {
-				log.Printf("Warning: Failed to create skill evidence: %v", err)
-			} else {
-				evidenceCount++
+	// Skill Evidence (only if we have skills)
+	if len(skillIDs) > 0 {
+		for i, engID := range data.EngineerIDs[:5] {
+			for j := 0; j < 3; j++ {
+				evidence := &models.SkillEvidence{
+					EngineerID:     engID,
+					SkillID:        skillIDs[j%len(skillIDs)],
+					EvidenceType:   []string{"pr_complexity", "code_review", "design_doc"}[j%3],
+					EvidenceSource: fmt.Sprintf("event_%d", i*3+j),
+					Strength:       0.7 + float64(i)*0.05,
+					Context:        `{"details": "Strong evidence of skill usage"}`,
+					DetectedAt:     data.Now.AddDate(0, 0, -(i*7 + j)),
+				}
+				if err := data.SkillsStore.CreateSkillEvidence(evidence); err != nil {
+					log.Printf("Warning: Failed to create skill evidence: %v", err)
+				} else {
+					evidenceCount++
+				}
 			}
 		}
 	}

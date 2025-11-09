@@ -51,6 +51,7 @@ func (s *SkillsStore) CreateSkill(skill *models.Skill) error {
 func (s *SkillsStore) GetSkill(id string) (*models.Skill, error) {
 	var skill models.Skill
 	var subcategory, description, criteria sql.NullString
+	var createdAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, name, category, subcategory, description,
@@ -59,7 +60,7 @@ func (s *SkillsStore) GetSkill(id string) (*models.Skill, error) {
 		WHERE id = ?
 	`, id).Scan(
 		&skill.ID, &skill.Name, &skill.Category, &subcategory,
-		&description, &criteria, &skill.CreatedAt,
+		&description, &criteria, &createdAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -78,6 +79,9 @@ func (s *SkillsStore) GetSkill(id string) (*models.Skill, error) {
 	if criteria.Valid {
 		skill.MeasurementCriteria = criteria.String
 	}
+
+	// Parse timestamp
+	skill.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
 
 	return &skill, nil
 }
@@ -129,10 +133,11 @@ func (s *SkillsStore) ListSkills(category string, limit, offset int) ([]*models.
 	for rows.Next() {
 		var skill models.Skill
 		var subcategory, description, criteria sql.NullString
+		var createdAtStr string
 
 		err := rows.Scan(
 			&skill.ID, &skill.Name, &skill.Category, &subcategory,
-			&description, &criteria, &skill.CreatedAt,
+			&description, &criteria, &createdAtStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan skill: %w", err)
@@ -147,6 +152,9 @@ func (s *SkillsStore) ListSkills(category string, limit, offset int) ([]*models.
 		if criteria.Valid {
 			skill.MeasurementCriteria = criteria.String
 		}
+
+		// Parse timestamp
+		skill.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
 
 		skills = append(skills, &skill)
 	}
@@ -189,6 +197,7 @@ func (s *SkillsStore) CreateEngineerSkill(es *models.EngineerSkill) error {
 func (s *SkillsStore) GetEngineerSkill(engineerID, skillID string) (*models.EngineerSkill, error) {
 	var es models.EngineerSkill
 	var previousScore sql.NullInt64
+	var createdAtStr, updatedAtStr, lastEvaluatedStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, engineer_id, skill_id, level_score, previous_level_score,
@@ -197,8 +206,8 @@ func (s *SkillsStore) GetEngineerSkill(engineerID, skillID string) (*models.Engi
 		WHERE engineer_id = ? AND skill_id = ?
 	`, engineerID, skillID).Scan(
 		&es.ID, &es.EngineerID, &es.SkillID, &es.LevelScore, &previousScore,
-		&es.Trajectory, &es.LastEvaluated, &es.EvidenceCount,
-		&es.CreatedAt, &es.UpdatedAt,
+		&es.Trajectory, &lastEvaluatedStr, &es.EvidenceCount,
+		&createdAtStr, &updatedAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -212,6 +221,11 @@ func (s *SkillsStore) GetEngineerSkill(engineerID, skillID string) (*models.Engi
 		score := int(previousScore.Int64)
 		es.PreviousLevelScore = &score
 	}
+
+	// Parse timestamps
+	es.LastEvaluated, _ = time.Parse(time.RFC3339, lastEvaluatedStr)
+	es.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
+	es.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAtStr)
 
 	return &es, nil
 }
@@ -251,11 +265,12 @@ func (s *SkillsStore) ListEngineerSkills(engineerID string, limit, offset int) (
 	for rows.Next() {
 		var es models.EngineerSkill
 		var previousScore sql.NullInt64
+		var createdAtStr, updatedAtStr, lastEvaluatedStr string
 
 		err := rows.Scan(
 			&es.ID, &es.EngineerID, &es.SkillID, &es.LevelScore, &previousScore,
-			&es.Trajectory, &es.LastEvaluated, &es.EvidenceCount,
-			&es.CreatedAt, &es.UpdatedAt,
+			&es.Trajectory, &lastEvaluatedStr, &es.EvidenceCount,
+			&createdAtStr, &updatedAtStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan engineer skill: %w", err)
@@ -265,6 +280,11 @@ func (s *SkillsStore) ListEngineerSkills(engineerID string, limit, offset int) (
 			score := int(previousScore.Int64)
 			es.PreviousLevelScore = &score
 		}
+
+		// Parse timestamps
+		es.LastEvaluated, _ = time.Parse(time.RFC3339, lastEvaluatedStr)
+		es.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
+		es.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAtStr)
 
 		skills = append(skills, &es)
 	}

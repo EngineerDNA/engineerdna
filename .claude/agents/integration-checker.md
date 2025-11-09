@@ -110,7 +110,7 @@ ls -la ./plugins/
 # For each plugin found, validate plugin.json using Read tool:
 # Read tool → file_path: "plugins/github/plugin.json"
 # Read tool → file_path: "plugins/csv-import/plugin.json"
-# Read tool → file_path: "plugins/ai-insights/plugin.json"
+# Read tool → file_path: "plugins/claude-insights/plugin.json"
 # Then validate JSON structure
 ```
 

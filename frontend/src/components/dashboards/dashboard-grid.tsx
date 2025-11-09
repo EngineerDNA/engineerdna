@@ -1,6 +1,7 @@
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import type { Layout } from 'react-grid-layout';
 import { WidgetContainer } from './widget-container';
+import { getWidget } from '../widgets/widget-registry';
 import { NumberCard } from '../widgets/number-card';
 import { TimeseriesChart } from '../widgets/timeseries-chart';
 import { BarChart } from '../widgets/bar-chart';
@@ -24,6 +25,8 @@ interface DashboardGridProps {
   onLayoutChange?: (layout: Layout[]) => void;
   onWidgetEdit?: (widgetId: string) => void;
   onWidgetDelete?: (widgetId: string) => void;
+  onOpenModal?: (modalType: string, data: any) => void;
+  onUpdateWidget?: (widgetId: string, updates: Record<string, any>) => void;
 }
 
 export function DashboardGrid({
@@ -33,6 +36,8 @@ export function DashboardGrid({
   onLayoutChange,
   onWidgetEdit,
   onWidgetDelete,
+  onOpenModal,
+  onUpdateWidget,
 }: DashboardGridProps) {
   const layouts = {
     lg: widgets.map((w) => ({
@@ -53,99 +58,129 @@ export function DashboardGrid({
   const renderWidget = (widget: Widget) => {
     const data = widgetData.get(widget.id);
 
-    switch (widget.type) {
-      case 'number': {
-        const numberData = data as {
-          value?: number;
-          previous?: number;
-          change_pct?: number;
-          change?: number;
-        };
-        const changeDirection =
-          numberData?.change === undefined || numberData?.change === 0
-            ? 'stable'
-            : numberData.change > 0
-              ? 'up'
-              : 'down';
-        return (
-          <NumberCard
-            title={widget.title}
-            value={numberData?.value ?? 0}
-            previousValue={numberData?.previous}
-            changePercentage={numberData?.change_pct}
-            changeDirection={changeDirection}
-            unit={(data as { unit?: string })?.unit}
-            isLoading={!data}
-          />
-        );
+    const legacyWidgetTypes = ['number', 'timeseries', 'bar', 'table', 'status', 'feed'];
+    const isLegacyWidget = legacyWidgetTypes.includes(widget.type);
+
+    if (isLegacyWidget) {
+      switch (widget.type) {
+        case 'number': {
+          const numberData = data as {
+            value?: number;
+            previous?: number;
+            change_pct?: number;
+            change?: number;
+          };
+          const changeDirection =
+            numberData?.change === undefined || numberData?.change === 0
+              ? 'stable'
+              : numberData.change > 0
+                ? 'up'
+                : 'down';
+          return (
+            <NumberCard
+              title={widget.title}
+              value={numberData?.value ?? 0}
+              previousValue={numberData?.previous}
+              changePercentage={numberData?.change_pct}
+              changeDirection={changeDirection}
+              unit={(data as { unit?: string })?.unit}
+              isLoading={!data}
+            />
+          );
+        }
+        case 'timeseries': {
+          const timeseriesData = data as {
+            data_points?: Array<{ period_start: string; period_end: string; value: number }>;
+          };
+          const transformedData =
+            timeseriesData?.data_points?.map((point) => ({
+              timestamp: point.period_start,
+              value: point.value,
+            })) ?? [];
+          const dataRecord = data as Record<string, unknown>;
+          return (
+            <TimeseriesChart
+              data={transformedData}
+              unit={(data as { unit?: string })?.unit}
+              alerts={
+                Array.isArray(dataRecord?.alerts)
+                  ? (dataRecord.alerts as unknown as import('../../api/metric-types').AlertMarker[])
+                  : []
+              }
+              isLoading={!data}
+            />
+          );
+        }
+        case 'bar':
+          return (
+            <BarChart
+              data={
+                (data as { entities?: Array<{ entity_name: string; value: number }> })?.entities ??
+                []
+              }
+              unit={(data as { unit?: string })?.unit}
+              isLoading={!data}
+            />
+          );
+        case 'table': {
+          const dataRecord = data as Record<string, unknown>;
+          return (
+            <Table
+              data={
+                Array.isArray(dataRecord?.engineers)
+                  ? (dataRecord.engineers as unknown as import('../../api/metric-types').EngineerPerformanceRow[])
+                  : []
+              }
+              isLoading={!data}
+            />
+          );
+        }
+        case 'status':
+          return <StatusIndicator status={data as HealthStatusResponse} isLoading={!data} />;
+        case 'feed': {
+          const dataRecord = data as Record<string, unknown>;
+          return (
+            <ActivityFeed
+              events={
+                Array.isArray(dataRecord?.events)
+                  ? (dataRecord.events as unknown as import('../../api/types').Event[])
+                  : []
+              }
+              isLoading={!data}
+              limit={
+                widget.query_params?.limit
+                  ? parseInt(widget.query_params.limit)
+                  : DEFAULT_TABLE_LIMIT
+              }
+            />
+          );
+        }
+        default:
+          return (
+            <div className="p-4 text-gray-500 dark:text-gray-400">
+              Unknown widget type: {widget.type}
+            </div>
+          );
       }
-      case 'timeseries': {
-        const timeseriesData = data as {
-          data_points?: Array<{ period_start: string; period_end: string; value: number }>;
-        };
-        const transformedData =
-          timeseriesData?.data_points?.map((point) => ({
-            timestamp: point.period_start,
-            value: point.value,
-          })) ?? [];
-        const dataRecord = data as Record<string, unknown>;
-        return (
-          <TimeseriesChart
-            data={transformedData}
-            unit={(data as { unit?: string })?.unit}
-            alerts={
-              Array.isArray(dataRecord?.alerts)
-                ? (dataRecord.alerts as unknown as import('../../api/metric-types').AlertMarker[])
-                : []
-            }
-            isLoading={!data}
-          />
-        );
-      }
-      case 'bar':
-        return (
-          <BarChart
-            data={
-              (data as { entities?: Array<{ entity_name: string; value: number }> })?.entities ?? []
-            }
-            unit={(data as { unit?: string })?.unit}
-            isLoading={!data}
-          />
-        );
-      case 'table': {
-        const dataRecord = data as Record<string, unknown>;
-        return (
-          <Table
-            data={
-              Array.isArray(dataRecord?.engineers)
-                ? (dataRecord.engineers as unknown as import('../../api/metric-types').EngineerPerformanceRow[])
-                : []
-            }
-            isLoading={!data}
-          />
-        );
-      }
-      case 'status':
-        return <StatusIndicator status={data as HealthStatusResponse} isLoading={!data} />;
-      case 'feed': {
-        const dataRecord = data as Record<string, unknown>;
-        return (
-          <ActivityFeed
-            events={
-              Array.isArray(dataRecord?.events)
-                ? (dataRecord.events as unknown as import('../../api/types').Event[])
-                : []
-            }
-            isLoading={!data}
-            limit={
-              widget.query_params?.limit ? parseInt(widget.query_params.limit) : DEFAULT_TABLE_LIMIT
-            }
-          />
-        );
-      }
-      default:
-        return <div className="p-4 text-gray-500">Unknown widget type: {widget.type}</div>;
     }
+
+    const WidgetComponent = getWidget(widget.type as any);
+    if (!WidgetComponent) {
+      return (
+        <div className="p-4 text-gray-500 dark:text-gray-400">
+          Unknown widget type: {widget.type}
+        </div>
+      );
+    }
+
+    return (
+      <WidgetComponent
+        widgetId={widget.id}
+        config={widget.config || {}}
+        onOpenModal={onOpenModal}
+        onUpdateWidget={onUpdateWidget}
+      />
+    );
   };
 
   if (widgets.length === 0) {

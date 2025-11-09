@@ -45,28 +45,26 @@ func NewService(
 
 // ComputeAllSnapshots computes snapshots for all metrics
 func (s *Service) ComputeAllSnapshots() error {
-	// Compute snapshots for today
-	today := time.Now().UTC().Format("2006-01-02")
-	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+	now := time.Now().UTC()
 
-	// Compute org-wide snapshots
-	if err := s.computeOrgSnapshots(today, today); err != nil {
-		return fmt.Errorf("failed to compute org snapshots: %w", err)
-	}
+	// Compute snapshots for the last 30 days to capture historical data
+	for i := 0; i < 30; i++ {
+		date := now.AddDate(0, 0, -i).Format("2006-01-02")
 
-	// Compute team snapshots
-	if err := s.computeTeamSnapshots(today, today); err != nil {
-		return fmt.Errorf("failed to compute team snapshots: %w", err)
-	}
+		// Compute org-wide snapshots
+		if err := s.computeOrgSnapshots(date, date); err != nil {
+			return fmt.Errorf("failed to compute org snapshots for %s: %w", date, err)
+		}
 
-	// Compute engineer snapshots
-	if err := s.computeEngineerSnapshots(today, today); err != nil {
-		return fmt.Errorf("failed to compute engineer snapshots: %w", err)
-	}
+		// Compute team snapshots
+		if err := s.computeTeamSnapshots(date, date); err != nil {
+			return fmt.Errorf("failed to compute team snapshots for %s: %w", date, err)
+		}
 
-	// Compute yesterday's snapshots for comparison
-	if err := s.computeOrgSnapshots(yesterday, yesterday); err != nil {
-		return fmt.Errorf("failed to compute org snapshots for yesterday: %w", err)
+		// Compute engineer snapshots
+		if err := s.computeEngineerSnapshots(date, date); err != nil {
+			return fmt.Errorf("failed to compute engineer snapshots for %s: %w", date, err)
+		}
 	}
 
 	return nil
@@ -77,7 +75,7 @@ func (s *Service) computeOrgSnapshots(periodStart, periodEnd string) error {
 	snapshots := []*models.MetricSnapshot{}
 
 	// PR Volume (org-wide)
-	prCount, err := s.dashboardStore.CountPRsByDate(periodStart)
+	prCount, err := s.dashboardStore.CountPRsByDate(periodStart, periodEnd)
 	if err != nil {
 		return fmt.Errorf("failed to count PRs: %w", err)
 	}
@@ -120,6 +118,34 @@ func (s *Service) computeOrgSnapshots(periodStart, periodEnd string) error {
 		PeriodEnd:   periodEnd,
 		Value:       float64(goalCount),
 	})
+
+	// Org-level Team Score (average of all team scores)
+	teamMetrics, err := s.dashboardStore.GetTeamMetricsForDate(periodStart, periodEnd+" 23:59:59")
+	if err != nil {
+		return fmt.Errorf("failed to get team metrics for org score: %w", err)
+	}
+
+	if len(teamMetrics) > 0 {
+		var totalScore float64
+		var teamCount int
+		for _, tm := range teamMetrics {
+			if tm.TeamScore > 0 {
+				totalScore += tm.TeamScore
+				teamCount++
+			}
+		}
+		if teamCount > 0 {
+			avgScore := totalScore / float64(teamCount)
+			snapshots = append(snapshots, &models.MetricSnapshot{
+				MetricName:  "team_score",
+				EntityType:  "org",
+				EntityID:    "",
+				PeriodStart: periodStart,
+				PeriodEnd:   periodEnd,
+				Value:       avgScore,
+			})
+		}
+	}
 
 	// Save all snapshots
 	return s.dashboardStore.CreateMetricSnapshotsBatch(snapshots)
@@ -173,7 +199,7 @@ func (s *Service) computeTeamSnapshots(periodStart, periodEnd string) error {
 // computeEngineerSnapshots computes engineer-level metric snapshots
 func (s *Service) computeEngineerSnapshots(periodStart, periodEnd string) error {
 	// Get all engineer metrics using repository method
-	engineerMetrics, err := s.dashboardStore.GetEngineerMetricsForDate(periodStart, db.MaxQueryLimit)
+	engineerMetrics, err := s.dashboardStore.GetEngineerMetricsForDate(periodStart, periodEnd, db.MaxQueryLimit)
 	if err != nil {
 		return fmt.Errorf("failed to get engineer metrics: %w", err)
 	}

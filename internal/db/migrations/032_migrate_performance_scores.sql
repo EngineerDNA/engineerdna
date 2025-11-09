@@ -1,4 +1,4 @@
--- Migration 032: Migrate Performance Scores to metric_values (PDR-9)
+-- Migration 032: Migrate Performance Scores to metric_values
 -- Consolidates performance_scores and team_performance_scores into universal metric_values table
 
 -- 1. Migrate individual engineer performance scores
@@ -195,6 +195,6 @@ FROM team_performance_scores
 WHERE impact_score IS NOT NULL
 AND 'tps_impact_' || id NOT IN (SELECT id FROM metric_values);
 
--- 3. Drop old tables (no backward compatibility needed for v1.0)
+-- 3. Drop old tables
 DROP TABLE IF EXISTS performance_scores;
 DROP TABLE IF EXISTS team_performance_scores;

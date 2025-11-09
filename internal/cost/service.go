@@ -27,7 +27,7 @@ func NewService(store *db.CostROIStore, teamStore *db.TeamStore, attributeStore 
 
 // CalculateEngineerCost gets current cost for an engineer
 func (s *Service) CalculateEngineerCost(engineerID string) (float64, error) {
-	// Get cost from entity_attributes (PDR-9 schema)
+	// Get cost from entity_attributes
 	attr, err := s.attributeStore.GetCurrentAttributeValue("engineer", engineerID, "monthly_cost")
 	if err != nil {
 		return 0, fmt.Errorf("failed to get engineer cost: %w", err)

@@ -7,38 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/engineerdna/engineerdna/internal/constants"
+	common "github.com/engineerdna/engineerdna/plugins/insights-common"
 	"github.com/engineerdna/engineerdna/plugins/plugin-sdk"
 )
-
-// sanitizeInput prevents prompt injection by escaping special characters
-// and removing potential instruction-like patterns
-func sanitizeInput(input string) string {
-	// Convert to string if needed
-	s := fmt.Sprintf("%v", input)
-
-	// Remove or escape characters that could be used for prompt injection
-	s = strings.ReplaceAll(s, "\n", " ") // Remove newlines
-	s = strings.ReplaceAll(s, "\r", "")  // Remove carriage returns
-	s = strings.ReplaceAll(s, "\t", " ") // Replace tabs with spaces
-	s = strings.ReplaceAll(s, "```", "") // Remove code blocks
-	s = strings.ReplaceAll(s, "<|", "")  // Remove special tokens
-	s = strings.ReplaceAll(s, "|>", "")  // Remove special tokens
-	s = strings.ReplaceAll(s, "{{", "")  // Remove template markers
-	s = strings.ReplaceAll(s, "}}", "")  // Remove template markers
-
-	// Limit length to prevent overwhelming the prompt
-	if len(s) > 500 {
-		s = s[:500] + "..."
-	}
-
-	// Trim whitespace
-	s = strings.TrimSpace(s)
-
-	return s
-}
 
 type OpenAIInsightsPlugin struct {
 	apiKey string
@@ -117,129 +90,26 @@ func (p *OpenAIInsightsPlugin) Analyze(request sdk.AnalyzeRequest) (sdk.AnalyzeR
 	}
 
 	// Validate analysisType against whitelist to prevent prompt injection
-	validTypes := map[string]bool{
-		"weekly_summary":    true,
-		"anomaly_detection": true,
-		"recommendations":   true,
-	}
-	if !validTypes[request.AnalysisType] {
-		return sdk.AnalyzeResult{}, fmt.Errorf("invalid analysis type: %s (must be one of: weekly_summary, anomaly_detection, recommendations)", request.AnalysisType)
+	if err := common.ValidateAnalysisType(request.AnalysisType); err != nil {
+		return sdk.AnalyzeResult{}, err
 	}
 
 	// Build prompt
-	prompt := p.buildPrompt(request.Events, request.AnalysisType)
+	promptResult := common.BuildPrompt(request.Events, request.AnalysisType, common.ProviderOpenAI)
 
-	// Call OpenAI API
-	response, err := p.callOpenAI(prompt)
+	// Call OpenAI API (uses combined prompt in UserMessage)
+	response, err := p.callOpenAI(promptResult.UserMessage)
 	if err != nil {
 		return sdk.AnalyzeResult{}, fmt.Errorf("OpenAI API error: %w", err)
 	}
 
 	// Parse response
-	result, err := p.parseResponse(response)
+	result, err := common.ParseResponse(response)
 	if err != nil {
 		return sdk.AnalyzeResult{}, fmt.Errorf("failed to parse AI response: %w", err)
 	}
 
 	return result, nil
-}
-
-func (p *OpenAIInsightsPlugin) buildPrompt(events []sdk.Event, analysisType string) string {
-	// Build structured event data (no string concatenation of user input)
-	type SafeEvent struct {
-		Type      string `json:"type"`
-		Action    string `json:"action"`
-		Actor     string `json:"actor"`
-		Timestamp string `json:"timestamp"`
-	}
-
-	var safeEvents []SafeEvent
-	prCount := 0
-	issueCount := 0
-	actors := make(map[string]bool)
-
-	// Limit to 50 events for token efficiency
-	limit := 50
-	if len(events) < limit {
-		limit = len(events)
-	}
-
-	for i := 0; i < limit; i++ {
-		event := events[i]
-
-		// Count types
-		switch event.Type {
-		case "pull_request":
-			prCount++
-		case "issue":
-			issueCount++
-		}
-		actors[event.Actor] = true
-
-		// Extract action safely
-		action := ""
-		if val, ok := event.Data["action"]; ok {
-			if str, ok := val.(string); ok {
-				action = str
-			}
-		}
-
-		// Build safe structured event (all fields properly typed)
-		safeEvents = append(safeEvents, SafeEvent{
-			Type:      event.Type,
-			Action:    action,
-			Actor:     event.Actor,
-			Timestamp: event.Timestamp.Format("2006-01-02"),
-		})
-	}
-
-	// Marshal events to JSON (safe from injection)
-	eventsJSON, err := json.Marshal(safeEvents)
-	if err != nil {
-		eventsJSON = []byte("[]")
-	}
-
-	// Build combined prompt
-	prompt := fmt.Sprintf(`You are analyzing engineering metrics for a software team.
-
-Analysis type: %s
-
-Summary statistics:
-- Pull Requests: %d
-- Issues: %d
-- Team size: %d engineers
-
-Events (JSON array):
-%s
-
-Generate insights in this exact JSON format:
-{
-  "insights": [
-    {
-      "severity": "info|warning|error",
-      "title": "Brief title",
-      "description": "Detailed description",
-      "recommendation": "Actionable suggestion",
-      "metrics": {}
-    }
-  ],
-  "summary": "Overall 2-3 sentence summary"
-}
-
-Focus on:
-1. Unusual patterns (anomalies)
-2. Productivity trends
-3. Potential bottlenecks
-4. Team health signals
-
-Respond ONLY with valid JSON. No markdown, no explanations, just the JSON object.`,
-		sanitizeInput(analysisType),
-		prCount,
-		issueCount,
-		len(actors),
-		string(eventsJSON))
-
-	return prompt
 }
 
 func (p *OpenAIInsightsPlugin) callOpenAI(prompt string) (string, error) {
@@ -352,26 +222,6 @@ func (p *OpenAIInsightsPlugin) callOpenAI(prompt string) (string, error) {
 	}
 
 	return content, nil
-}
-
-func (p *OpenAIInsightsPlugin) parseResponse(response string) (sdk.AnalyzeResult, error) {
-	// Strip markdown if present
-	response = strings.TrimPrefix(response, "```json\n")
-	response = strings.TrimPrefix(response, "```\n")
-	response = strings.TrimSuffix(response, "\n```")
-	response = strings.TrimSpace(response)
-
-	var result sdk.AnalyzeResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		// Truncate response in error to prevent leaking large/sensitive data
-		preview := response
-		if len(preview) > 200 {
-			preview = preview[:200] + "... (truncated)"
-		}
-		return sdk.AnalyzeResult{}, fmt.Errorf("failed to parse JSON: %w (response preview: %s)", err, preview)
-	}
-
-	return result, nil
 }
 
 func main() {

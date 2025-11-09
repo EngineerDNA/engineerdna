@@ -57,6 +57,7 @@ func (s *CostROIStore) GetFeatureValue(id string) (*models.FeatureValue, error) 
 	var feature models.FeatureValue
 	var description, source, sourceRef, timePeriod sql.NullString
 	var valueAmount sql.NullFloat64
+	var createdAtStr, updatedAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, feature_name, feature_description, value_type, value_amount,
@@ -67,7 +68,7 @@ func (s *CostROIStore) GetFeatureValue(id string) (*models.FeatureValue, error) 
 	`, id).Scan(
 		&feature.ID, &feature.FeatureName, &description, &feature.ValueType,
 		&valueAmount, &feature.ValueCurrency, &feature.ConfidenceLevel,
-		&source, &sourceRef, &timePeriod, &feature.CreatedAt, &feature.UpdatedAt,
+		&source, &sourceRef, &timePeriod, &createdAtStr, &updatedAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -92,6 +93,10 @@ func (s *CostROIStore) GetFeatureValue(id string) (*models.FeatureValue, error) 
 	if timePeriod.Valid {
 		feature.TimePeriod = timePeriod.String
 	}
+
+	// Parse timestamps
+	feature.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
+	feature.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAtStr)
 
 	return &feature, nil
 }
@@ -145,11 +150,12 @@ func (s *CostROIStore) ListFeatureValues(timePeriod string, limit, offset int) (
 		var feature models.FeatureValue
 		var description, source, sourceRef, timePeriod sql.NullString
 		var valueAmount sql.NullFloat64
+		var createdAtStr, updatedAtStr string
 
 		err := rows.Scan(
 			&feature.ID, &feature.FeatureName, &description, &feature.ValueType,
 			&valueAmount, &feature.ValueCurrency, &feature.ConfidenceLevel,
-			&source, &sourceRef, &timePeriod, &feature.CreatedAt, &feature.UpdatedAt,
+			&source, &sourceRef, &timePeriod, &createdAtStr, &updatedAtStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan feature value: %w", err)
@@ -170,6 +176,10 @@ func (s *CostROIStore) ListFeatureValues(timePeriod string, limit, offset int) (
 		if timePeriod.Valid {
 			feature.TimePeriod = timePeriod.String
 		}
+
+		// Parse timestamps
+		feature.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
+		feature.UpdatedAt, _ = time.Parse(time.RFC3339, updatedAtStr)
 
 		features = append(features, &feature)
 	}

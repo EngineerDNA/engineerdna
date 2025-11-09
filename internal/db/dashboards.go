@@ -286,14 +286,14 @@ type EngineerMetrics struct {
 	PRCount       float64
 }
 
-// CountPRsByDate counts pull requests for a specific date
-func (s *DashboardStore) CountPRsByDate(date string) (int, error) {
+// CountPRsByDate counts pull requests within a date range (inclusive)
+func (s *DashboardStore) CountPRsByDate(startDate, endDate string) (int, error) {
 	var count int
 	err := s.db.QueryRow(`
 		SELECT COUNT(*) FROM events
 		WHERE type = 'pull_request'
-		  AND DATE(timestamp) = ?
-	`, date).Scan(&count)
+		  AND timestamp >= ? AND timestamp < ?
+	`, startDate, endDate+" 23:59:59").Scan(&count)
 
 	if err != nil && err != sql.ErrNoRows {
 		return 0, fmt.Errorf("failed to count PRs by date: %w", err)
@@ -333,28 +333,29 @@ func (s *DashboardStore) CountActiveGoals() (int, error) {
 	return count, nil
 }
 
-// GetTeamMetricsForDate retrieves aggregated metrics for all teams on a specific date
+// GetTeamMetricsForDate retrieves aggregated metrics for all teams within a date range
 func (s *DashboardStore) GetTeamMetricsForDate(periodStart, periodEnd string) ([]TeamMetrics, error) {
 	query := `
 		SELECT
 			t.id,
-			COALESCE(tps.total_score, 0) as team_score,
-			COUNT(DISTINCT CASE WHEN e.type = 'pull_request' AND DATE(e.timestamp) = ? THEN e.id END) as pr_count,
+			COALESCE(mv.value, 0) as team_score,
+			COUNT(DISTINCT CASE WHEN e.type = 'pull_request' AND e.timestamp >= ? AND e.timestamp < ? THEN e.id END) as pr_count,
 			COUNT(DISTINCT CASE WHEN ai.fired_at >= ? AND ai.fired_at < ? AND ai.resolved_at IS NULL THEN ai.id END) as alert_count
 		FROM teams t
 		LEFT JOIN (
-			SELECT team_id, total_score, created_at,
-				ROW_NUMBER() OVER (PARTITION BY team_id ORDER BY created_at DESC) as rn
-			FROM team_performance_scores
-		) tps ON t.id = tps.team_id AND tps.rn = 1
+			SELECT dimensions, value, created_at,
+				ROW_NUMBER() OVER (PARTITION BY dimensions ORDER BY created_at DESC) as rn
+			FROM metric_values
+			WHERE metric_name = 'team_total_score'
+		) mv ON mv.dimensions LIKE '%"team_id":"' || t.id || '"%' AND mv.rn = 1
 		LEFT JOIN team_membership tm ON t.id = tm.team_id AND tm.left_at IS NULL
 		LEFT JOIN engineers eng ON tm.member_id = eng.id
 		LEFT JOIN events e ON eng.email = e.actor
 		LEFT JOIN alert_instances ai ON ai.entity_type = 'team' AND ai.entity_id = t.id
-		GROUP BY t.id, tps.total_score
+		GROUP BY t.id, mv.value
 	`
 
-	rows, err := s.db.Query(query, periodStart, periodStart, periodEnd)
+	rows, err := s.db.Query(query, periodStart, periodEnd, periodStart, periodEnd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get team metrics: %w", err)
 	}
@@ -376,8 +377,8 @@ func (s *DashboardStore) GetTeamMetricsForDate(periodStart, periodEnd string) ([
 	return metrics, nil
 }
 
-// GetEngineerMetricsForDate retrieves aggregated metrics for engineers on a specific date
-func (s *DashboardStore) GetEngineerMetricsForDate(periodStart string, limit int) ([]EngineerMetrics, error) {
+// GetEngineerMetricsForDate retrieves aggregated metrics for engineers within a date range
+func (s *DashboardStore) GetEngineerMetricsForDate(periodStart, periodEnd string, limit int) ([]EngineerMetrics, error) {
 	if limit <= 0 {
 		limit = MaxQueryLimit
 	}
@@ -385,20 +386,21 @@ func (s *DashboardStore) GetEngineerMetricsForDate(periodStart string, limit int
 	query := `
 		SELECT
 			e.id,
-			COALESCE(ps.total_score, 0) as engineer_score,
-			COUNT(DISTINCT CASE WHEN ev.type = 'pull_request' AND DATE(ev.timestamp) = ? THEN ev.id END) as pr_count
+			COALESCE(mv.value, 0) as engineer_score,
+			COUNT(DISTINCT CASE WHEN ev.type = 'pull_request' AND ev.timestamp >= ? AND ev.timestamp < ? THEN ev.id END) as pr_count
 		FROM engineers e
 		LEFT JOIN (
-			SELECT engineer_id, total_score, created_at,
-				ROW_NUMBER() OVER (PARTITION BY engineer_id ORDER BY created_at DESC) as rn
-			FROM performance_scores
-		) ps ON e.id = ps.engineer_id AND ps.rn = 1
+			SELECT dimensions, value, created_at,
+				ROW_NUMBER() OVER (PARTITION BY dimensions ORDER BY created_at DESC) as rn
+			FROM metric_values
+			WHERE metric_name = 'engineer_total_score'
+		) mv ON mv.dimensions LIKE '%"engineer_id":"' || e.id || '"%' AND mv.rn = 1
 		LEFT JOIN events ev ON e.email = ev.actor
-		GROUP BY e.id, ps.total_score
+		GROUP BY e.id, mv.value
 		LIMIT ?
 	`
 
-	rows, err := s.db.Query(query, periodStart, limit)
+	rows, err := s.db.Query(query, periodStart, periodEnd, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get engineer metrics: %w", err)
 	}
@@ -424,11 +426,12 @@ func (s *DashboardStore) GetEngineerMetricsForDate(periodStart string, limit int
 func (s *DashboardStore) GetLatestTeamScore(teamID string) (float64, error) {
 	var score sql.NullFloat64
 	err := s.db.QueryRow(`
-		SELECT total_score FROM team_performance_scores
-		WHERE team_id = ?
+		SELECT value FROM metric_values
+		WHERE metric_name = 'team_total_score'
+		  AND dimensions LIKE ?
 		ORDER BY created_at DESC
 		LIMIT 1
-	`, teamID).Scan(&score)
+	`, "%\"team_id\":\""+teamID+"\"%").Scan(&score)
 
 	if err == sql.ErrNoRows || !score.Valid {
 		return 0, nil

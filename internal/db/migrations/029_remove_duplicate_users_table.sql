@@ -1,6 +1,6 @@
 -- Migration 029: Remove Duplicate Users Table
 -- The 'engineers' table is the primary entity for tracking developers
--- The 'users' table from PDR-1 is legacy and unused
+-- The 'users' table is legacy and unused
 -- This migration removes the duplicate table
 
 -- Verify no data exists before dropping (safety check)

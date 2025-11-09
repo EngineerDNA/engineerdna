@@ -19,6 +19,30 @@ func NewGoalsStore(db *sql.DB) *GoalsStore {
 	return &GoalsStore{db: db}
 }
 
+// parseTimestamp attempts to parse a timestamp string in multiple formats
+func parseTimestamp(s string) (time.Time, error) {
+	if s == "" {
+		return time.Time{}, fmt.Errorf("empty timestamp string")
+	}
+
+	// Try RFC3339 format first (standard)
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t, nil
+	}
+
+	// Try Go's default time.Time string format
+	if t, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", s); err == nil {
+		return t, nil
+	}
+
+	// Try without nanoseconds
+	if t, err := time.Parse("2006-01-02 15:04:05 -0700 MST", s); err == nil {
+		return t, nil
+	}
+
+	return time.Time{}, fmt.Errorf("unable to parse timestamp: %s", s)
+}
+
 // Goal CRUD operations
 
 // CreateGoal creates a new goal
@@ -57,6 +81,7 @@ func (s *GoalsStore) CreateGoal(goal *models.Goal) error {
 func (s *GoalsStore) GetGoal(id string) (*models.Goal, error) {
 	var goal models.Goal
 	var ownerID, description, successCriteria sql.NullString
+	var startDateStr, endDateStr, createdAtStr, updatedAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, title, description, goal_type, owner_type, owner_id,
@@ -67,9 +92,9 @@ func (s *GoalsStore) GetGoal(id string) (*models.Goal, error) {
 		WHERE id = ?
 	`, id).Scan(
 		&goal.ID, &goal.Title, &description, &goal.GoalType, &goal.OwnerType, &ownerID,
-		&goal.TimePeriod, &goal.StartDate, &goal.EndDate, &goal.TrackingMethod,
+		&goal.TimePeriod, &startDateStr, &endDateStr, &goal.TrackingMethod,
 		&successCriteria, &goal.Status, &goal.ProgressPercentage,
-		&goal.CreatedAt, &goal.UpdatedAt,
+		&createdAtStr, &updatedAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -88,6 +113,12 @@ func (s *GoalsStore) GetGoal(id string) (*models.Goal, error) {
 	if successCriteria.Valid {
 		goal.SuccessCriteria = successCriteria.String
 	}
+
+	// Parse timestamps - try RFC3339 first, then Go default format
+	goal.StartDate, _ = parseTimestamp(startDateStr)
+	goal.EndDate, _ = parseTimestamp(endDateStr)
+	goal.CreatedAt, _ = parseTimestamp(createdAtStr)
+	goal.UpdatedAt, _ = parseTimestamp(updatedAtStr)
 
 	return &goal, nil
 }
@@ -153,12 +184,13 @@ func (s *GoalsStore) ListGoals(ownerType, ownerID, status, timePeriod string, li
 	for rows.Next() {
 		var goal models.Goal
 		var ownerID, description, successCriteria sql.NullString
+		var startDateStr, endDateStr, createdAtStr, updatedAtStr string
 
 		err := rows.Scan(
 			&goal.ID, &goal.Title, &description, &goal.GoalType, &goal.OwnerType, &ownerID,
-			&goal.TimePeriod, &goal.StartDate, &goal.EndDate, &goal.TrackingMethod,
+			&goal.TimePeriod, &startDateStr, &endDateStr, &goal.TrackingMethod,
 			&successCriteria, &goal.Status, &goal.ProgressPercentage,
-			&goal.CreatedAt, &goal.UpdatedAt,
+			&createdAtStr, &updatedAtStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan goal: %w", err)
@@ -173,6 +205,12 @@ func (s *GoalsStore) ListGoals(ownerType, ownerID, status, timePeriod string, li
 		if successCriteria.Valid {
 			goal.SuccessCriteria = successCriteria.String
 		}
+
+		// Parse timestamps - try RFC3339 first, then Go default format
+		goal.StartDate, _ = parseTimestamp(startDateStr)
+		goal.EndDate, _ = parseTimestamp(endDateStr)
+		goal.CreatedAt, _ = parseTimestamp(createdAtStr)
+		goal.UpdatedAt, _ = parseTimestamp(updatedAtStr)
 
 		goals = append(goals, &goal)
 	}
@@ -265,7 +303,7 @@ func (s *GoalsStore) GetMilestoneByID(milestoneID string) (*models.GoalMilestone
 	var m models.GoalMilestone
 	var description, unit sql.NullString
 	var targetValue, currentValue sql.NullFloat64
-	var completedAt, dueDate sql.NullTime
+	var completedAtStr, dueDateStr, createdAtStr sql.NullString
 
 	err := s.db.QueryRow(`
 		SELECT id, goal_id, title, description, target_value,
@@ -275,8 +313,8 @@ func (s *GoalsStore) GetMilestoneByID(milestoneID string) (*models.GoalMilestone
 		WHERE id = ?
 	`, milestoneID).Scan(
 		&m.ID, &m.GoalID, &m.Title, &description, &targetValue,
-		&currentValue, &unit, &m.Completed, &completedAt,
-		&dueDate, &m.CreatedAt,
+		&currentValue, &unit, &m.Completed, &completedAtStr,
+		&dueDateStr, &createdAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -298,11 +336,18 @@ func (s *GoalsStore) GetMilestoneByID(milestoneID string) (*models.GoalMilestone
 	if unit.Valid {
 		m.Unit = unit.String
 	}
-	if completedAt.Valid {
-		m.CompletedAt = &completedAt.Time
+	if completedAtStr.Valid {
+		if t, err := parseTimestamp(completedAtStr.String); err == nil {
+			m.CompletedAt = &t
+		}
 	}
-	if dueDate.Valid {
-		m.DueDate = &dueDate.Time
+	if dueDateStr.Valid {
+		if t, err := parseTimestamp(dueDateStr.String); err == nil {
+			m.DueDate = &t
+		}
+	}
+	if createdAtStr.Valid {
+		m.CreatedAt, _ = parseTimestamp(createdAtStr.String)
 	}
 
 	return &m, nil
@@ -345,12 +390,12 @@ func (s *GoalsStore) GetMilestones(goalID string, limit, offset int) ([]*models.
 		var m models.GoalMilestone
 		var description, unit sql.NullString
 		var targetValue, currentValue sql.NullFloat64
-		var completedAt, dueDate sql.NullTime
+		var completedAtStr, dueDateStr, createdAtStr sql.NullString
 
 		err := rows.Scan(
 			&m.ID, &m.GoalID, &m.Title, &description, &targetValue,
-			&currentValue, &unit, &m.Completed, &completedAt,
-			&dueDate, &m.CreatedAt,
+			&currentValue, &unit, &m.Completed, &completedAtStr,
+			&dueDateStr, &createdAtStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan milestone: %w", err)
@@ -368,11 +413,18 @@ func (s *GoalsStore) GetMilestones(goalID string, limit, offset int) ([]*models.
 		if unit.Valid {
 			m.Unit = unit.String
 		}
-		if completedAt.Valid {
-			m.CompletedAt = &completedAt.Time
+		if completedAtStr.Valid {
+			if t, err := parseTimestamp(completedAtStr.String); err == nil {
+				m.CompletedAt = &t
+			}
 		}
-		if dueDate.Valid {
-			m.DueDate = &dueDate.Time
+		if dueDateStr.Valid {
+			if t, err := parseTimestamp(dueDateStr.String); err == nil {
+				m.DueDate = &t
+			}
+		}
+		if createdAtStr.Valid {
+			m.CreatedAt, _ = parseTimestamp(createdAtStr.String)
 		}
 
 		milestones = append(milestones, &m)
@@ -460,10 +512,11 @@ func (s *GoalsStore) GetProgressLogs(goalID string, limit, offset int) ([]*model
 		var log models.GoalProgressLog
 		var milestoneID, evidence, loggedBy sql.NullString
 		var previousValue, newValue sql.NullFloat64
+		var loggedAtStr string
 
 		err := rows.Scan(
 			&log.ID, &log.GoalID, &milestoneID, &previousValue, &newValue,
-			&log.ChangeType, &evidence, &log.LoggedAt, &loggedBy,
+			&log.ChangeType, &evidence, &loggedAtStr, &loggedBy,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan progress log: %w", err)
@@ -484,6 +537,9 @@ func (s *GoalsStore) GetProgressLogs(goalID string, limit, offset int) ([]*model
 		if loggedBy.Valid {
 			log.LoggedBy = &loggedBy.String
 		}
+
+		// Parse timestamp - try RFC3339 first, then Go default format
+		log.LoggedAt, _ = parseTimestamp(loggedAtStr)
 
 		logs = append(logs, &log)
 	}
@@ -546,13 +602,18 @@ func (s *GoalsStore) GetDependencies(goalID string, limit, offset int) ([]*model
 	var deps []*models.GoalDependency
 	for rows.Next() {
 		var dep models.GoalDependency
+		var createdAtStr string
 		err := rows.Scan(
 			&dep.ID, &dep.GoalID, &dep.DependsOnGoalID,
-			&dep.DependencyType, &dep.Status, &dep.CreatedAt,
+			&dep.DependencyType, &dep.Status, &createdAtStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan dependency: %w", err)
 		}
+
+		// Parse timestamp - try RFC3339 first, then Go default format
+		dep.CreatedAt, _ = parseTimestamp(createdAtStr)
+
 		deps = append(deps, &dep)
 	}
 
@@ -615,11 +676,11 @@ func (s *GoalsStore) GetGoalMetrics(goalID string, limit, offset int) ([]*models
 	for rows.Next() {
 		var m models.GoalMetric
 		var currentValue sql.NullFloat64
-		var lastEvaluated sql.NullTime
+		var lastEvaluatedStr sql.NullString
 
 		err := rows.Scan(
 			&m.ID, &m.GoalID, &m.MetricName, &m.TargetValue, &currentValue,
-			&m.Operator, &lastEvaluated,
+			&m.Operator, &lastEvaluatedStr,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan goal metric: %w", err)
@@ -628,8 +689,10 @@ func (s *GoalsStore) GetGoalMetrics(goalID string, limit, offset int) ([]*models
 		if currentValue.Valid {
 			m.CurrentValue = &currentValue.Float64
 		}
-		if lastEvaluated.Valid {
-			m.LastEvaluated = &lastEvaluated.Time
+		if lastEvaluatedStr.Valid {
+			if t, err := parseTimestamp(lastEvaluatedStr.String); err == nil {
+				m.LastEvaluated = &t
+			}
 		}
 
 		metrics = append(metrics, &m)

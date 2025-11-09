@@ -1,4 +1,4 @@
--- Migration 028: Multi-Modal Data Model (PDR-9 Phase 1)
+-- Migration 028: Multi-Modal Data Model
 -- Extends EngineerDNA to support three data types: Events, Metrics, Attributes
 -- Enables AWS cost tracking, team size tracking, cross-data correlations
 

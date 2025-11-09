@@ -49,12 +49,13 @@ func (s *AttributeStore) Create(attr *models.EntityAttribute) error {
 // GetByID retrieves an attribute by ID
 func (s *AttributeStore) GetByID(id string) (*models.EntityAttribute, error) {
 	var attr models.EntityAttribute
-	var validUntil sql.NullTime
+	var validFromStr, createdAtStr string
+	var validUntil sql.NullString
 
 	err := s.db.QueryRow(`
 		SELECT id, entity_type, entity_id, attribute_name, value, value_type, valid_from, valid_until, source, created_at
 		FROM entity_attributes WHERE id = ?
-	`, id).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+	`, id).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &validFromStr, &validUntil, &attr.Source, &createdAtStr)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -63,8 +64,13 @@ func (s *AttributeStore) GetByID(id string) (*models.EntityAttribute, error) {
 		return nil, fmt.Errorf("failed to get attribute: %w", err)
 	}
 
+	// Parse timestamps
+	attr.ValidFrom, _ = parseTimestamp(validFromStr)
+	attr.CreatedAt, _ = parseTimestamp(createdAtStr)
+
 	if validUntil.Valid {
-		attr.ValidUntil = &validUntil.Time
+		t, _ := parseTimestamp(validUntil.String)
+		attr.ValidUntil = &t
 	}
 
 	return &attr, nil
@@ -104,15 +110,21 @@ func (s *AttributeStore) List(filters map[string]interface{}, limit, offset int)
 	var attributes []*models.EntityAttribute
 	for rows.Next() {
 		var attr models.EntityAttribute
-		var validUntil sql.NullTime
+		var validFromStr, createdAtStr string
+		var validUntil sql.NullString
 
-		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &validFromStr, &validUntil, &attr.Source, &createdAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan attribute: %w", err)
 		}
 
+		// Parse timestamps
+		attr.ValidFrom, _ = parseTimestamp(validFromStr)
+		attr.CreatedAt, _ = parseTimestamp(createdAtStr)
+
 		if validUntil.Valid {
-			attr.ValidUntil = &validUntil.Time
+			t, _ := parseTimestamp(validUntil.String)
+			attr.ValidUntil = &t
 		}
 
 		attributes = append(attributes, &attr)
@@ -142,15 +154,21 @@ func (s *AttributeStore) GetCurrentAttributes(entityType, entityID string) ([]*m
 	var attributes []*models.EntityAttribute
 	for rows.Next() {
 		var attr models.EntityAttribute
-		var validUntil sql.NullTime
+		var validFromStr, createdAtStr string
+		var validUntil sql.NullString
 
-		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &validFromStr, &validUntil, &attr.Source, &createdAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan attribute: %w", err)
 		}
 
+		// Parse timestamps
+		attr.ValidFrom, _ = parseTimestamp(validFromStr)
+		attr.CreatedAt, _ = parseTimestamp(createdAtStr)
+
 		if validUntil.Valid {
-			attr.ValidUntil = &validUntil.Time
+			t, _ := parseTimestamp(validUntil.String)
+			attr.ValidUntil = &t
 		}
 
 		attributes = append(attributes, &attr)
@@ -189,15 +207,21 @@ func (s *AttributeStore) GetEntityAttributes(entityType, entityID, attributeName
 	var attributes []*models.EntityAttribute
 	for rows.Next() {
 		var attr models.EntityAttribute
-		var validUntil sql.NullTime
+		var validFromStr, createdAtStr string
+		var validUntil sql.NullString
 
-		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+		err := rows.Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &validFromStr, &validUntil, &attr.Source, &createdAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan attribute: %w", err)
 		}
 
+		// Parse timestamps
+		attr.ValidFrom, _ = parseTimestamp(validFromStr)
+		attr.CreatedAt, _ = parseTimestamp(createdAtStr)
+
 		if validUntil.Valid {
-			attr.ValidUntil = &validUntil.Time
+			t, _ := parseTimestamp(validUntil.String)
+			attr.ValidUntil = &t
 		}
 
 		attributes = append(attributes, &attr)
@@ -210,7 +234,8 @@ func (s *AttributeStore) GetEntityAttributes(entityType, entityID, attributeName
 // Replaces GetCurrentCostForEntity from cost_roi.go for engineers
 func (s *AttributeStore) GetEngineerCost(engineerID string) (*models.EntityAttribute, error) {
 	var attr models.EntityAttribute
-	var validUntil sql.NullTime
+	var validFromStr, createdAtStr string
+	var validUntil sql.NullString
 
 	now := time.Now().UTC()
 	err := s.db.QueryRow(`
@@ -223,7 +248,7 @@ func (s *AttributeStore) GetEngineerCost(engineerID string) (*models.EntityAttri
 		  AND (valid_until IS NULL OR valid_until > ?)
 		ORDER BY valid_from DESC
 		LIMIT 1
-	`, engineerID, now, now).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+	`, engineerID, now, now).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &validFromStr, &validUntil, &attr.Source, &createdAtStr)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -232,8 +257,13 @@ func (s *AttributeStore) GetEngineerCost(engineerID string) (*models.EntityAttri
 		return nil, fmt.Errorf("failed to get engineer cost: %w", err)
 	}
 
+	// Parse timestamps
+	attr.ValidFrom, _ = parseTimestamp(validFromStr)
+	attr.CreatedAt, _ = parseTimestamp(createdAtStr)
+
 	if validUntil.Valid {
-		attr.ValidUntil = &validUntil.Time
+		t, _ := parseTimestamp(validUntil.String)
+		attr.ValidUntil = &t
 	}
 
 	return &attr, nil
@@ -292,7 +322,8 @@ func (s *AttributeStore) GetTeamCosts(teamID string) ([]*models.EntityAttribute,
 // Returns the value as a map if it's JSON, otherwise as a string
 func (s *AttributeStore) GetCurrentAttributeValue(entityType, entityID, attributeName string) (interface{}, error) {
 	var attr models.EntityAttribute
-	var validUntil sql.NullTime
+	var validFromStr, createdAtStr string
+	var validUntil sql.NullString
 
 	now := time.Now().UTC()
 	err := s.db.QueryRow(`
@@ -305,13 +336,22 @@ func (s *AttributeStore) GetCurrentAttributeValue(entityType, entityID, attribut
 		  AND (valid_until IS NULL OR valid_until > ?)
 		ORDER BY valid_from DESC
 		LIMIT 1
-	`, entityType, entityID, attributeName, now, now).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &attr.ValidFrom, &validUntil, &attr.Source, &attr.CreatedAt)
+	`, entityType, entityID, attributeName, now, now).Scan(&attr.ID, &attr.EntityType, &attr.EntityID, &attr.AttributeName, &attr.Value, &attr.ValueType, &validFromStr, &validUntil, &attr.Source, &createdAtStr)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get attribute value: %w", err)
+	}
+
+	// Parse timestamps (not used in return value but needed for scanning)
+	attr.ValidFrom, _ = parseTimestamp(validFromStr)
+	attr.CreatedAt, _ = parseTimestamp(createdAtStr)
+
+	if validUntil.Valid {
+		t, _ := parseTimestamp(validUntil.String)
+		attr.ValidUntil = &t
 	}
 
 	// Parse value based on type

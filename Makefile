@@ -29,7 +29,6 @@ plugins:
 	cd plugins/claude-insights && go build -ldflags="-s -w" -o claude-insights .
 	cd plugins/openai-insights && go build -ldflags="-s -w" -o openai-insights .
 	cd plugins/ollama-insights && go build -ldflags="-s -w" -o ollama-insights .
-	cd plugins/ai-insights && go build -ldflags="-s -w" -o ai-insights .
 	@echo "Building destination plugins..."
 	cd plugins/google-sheets-export && go build -ldflags="-s -w" -o google-sheets-export .
 	@echo "All plugins built successfully"
@@ -48,7 +47,6 @@ clean:
 	rm -f plugins/claude-insights/claude-insights
 	rm -f plugins/openai-insights/openai-insights
 	rm -f plugins/ollama-insights/ollama-insights
-	rm -f plugins/ai-insights/ai-insights
 	rm -f plugins/google-sheets-export/google-sheets-export
 	find plugins -type f -name "*.exe" -delete
 

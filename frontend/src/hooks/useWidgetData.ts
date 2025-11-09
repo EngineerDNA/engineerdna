@@ -67,13 +67,16 @@ export function useWidgetData(dashboard: Dashboard | undefined) {
                 break;
 
               case 'bar':
-                if (params.metric && params.entity_type !== 'org') {
-                  data = await dashboardsApi.getMetricCompare({
-                    metric_type: params.metric,
-                    entity_type: params.entity_type as 'engineer' | 'team',
-                    entity_ids: [],
-                    time_range: params.time_range || '30d',
-                  });
+                if (params.metric) {
+                  const entityType = params.group_by || params.entity_type;
+                  if (entityType && entityType !== 'org') {
+                    data = await dashboardsApi.getMetricCompare({
+                      metric_type: params.metric,
+                      entity_type: entityType as 'engineer' | 'team',
+                      entity_ids: [],
+                      time_range: params.period || params.time_range || '30d',
+                    });
+                  }
                 }
                 break;
 

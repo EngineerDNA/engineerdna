@@ -4,20 +4,25 @@ import (
 	"net/http"
 )
 
-const (
-	OnboardingKey = "onboarding_completed"
-)
-
-type OnboardingStatusResponse struct {
-	Completed bool `json:"completed"`
-}
-
 func (s *Server) handleOnboardingStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	// Use new onboarding service if available
+	if s.onboardingService != nil {
+		status, err := s.onboardingService.GetOnboardingStatus()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to get onboarding status", err)
+			return
+		}
+		respondJSON(w, http.StatusOK, status)
+		return
+	}
+
+	// Fallback to old config store method
+	const OnboardingKey = "onboarding_completed"
 	value, err := s.configStore.Get(OnboardingKey)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to get onboarding status", err)
@@ -33,8 +38,8 @@ func (s *Server) handleOnboardingStatus(w http.ResponseWriter, r *http.Request) 
 				respondError(w, http.StatusInternalServerError, "Failed to set onboarding status", setErr)
 				return
 			}
-			respondJSON(w, http.StatusOK, OnboardingStatusResponse{
-				Completed: true,
+			respondJSON(w, http.StatusOK, map[string]interface{}{
+				"completed": true,
 			})
 			return
 		}
@@ -43,8 +48,8 @@ func (s *Server) handleOnboardingStatus(w http.ResponseWriter, r *http.Request) 
 	// Return current status
 	completed := value == "true"
 
-	respondJSON(w, http.StatusOK, OnboardingStatusResponse{
-		Completed: completed,
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"completed": completed,
 	})
 }
 
@@ -82,6 +87,21 @@ func (s *Server) handleOnboardingComplete(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Use new onboarding service if available
+	if s.onboardingService != nil {
+		if err := s.onboardingService.CompleteOnboarding(); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to complete onboarding", err)
+			return
+		}
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"success":   true,
+			"completed": true,
+		})
+		return
+	}
+
+	// Fallback to old config store method
+	const OnboardingKey = "onboarding_completed"
 	err := s.configStore.Set(OnboardingKey, "true")
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to save onboarding status", err)

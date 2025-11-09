@@ -31,7 +31,7 @@ Engineering metrics and insights platform with privacy-first anonymization and b
 - **Manager Context**: Manager notes, context annotations, sentiment surveys, team context
 - **Predictive Analytics**: Sprint/goal completion predictions, what-if scenarios, risk predictions, forecast accuracy
 - **Action Tracking**: AI-generated recommendations, action tracking with assignments, outcome measurement
-- **Dashboard Builder**: Customizable dashboards with 6 widget types, 4 default templates, pre-computed metric snapshots
+- **Dashboard Builder**: Customizable dashboards with 22 widget types, 12 role-based templates, pre-computed metric snapshots
 - **Multi-Modal Data System**: Metrics (time-series), Attributes (temporal validity), Correlations (cross-data-type)
 - **Event Normalization**: Multi-source event support (GitHub PR + GitLab MR → code_review)
 - **Metric Calculation Engine**: Compute metrics from events using SQL aggregations
@@ -280,23 +280,52 @@ engineerdna help          # Show help
 
 For complete API documentation, see the [API Reference](docs/api-reference.md).
 
-## Dashboard Builder
+## Dashboard-First UI
 
-Create personalized engineering dashboards with:
-- **4 pre-built templates** (IC, Team Lead, Director, Planning)
-- **6 widget types** (Number Card, Timeseries, Bar Chart, Table, Status Indicator, Activity Feed)
-- **Drag-and-drop layout** with responsive grid
-- **Real-time data** auto-refreshing every 30 seconds
+EngineerDNA uses a dashboard-first architecture with role-based personalization.
 
-### Quick Start
+### Navigation
 
-1. Navigate to Dashboards page
-2. Select a template or create custom dashboard
-3. Click "Edit Layout" to enable drag-and-drop
-4. Add widgets and configure data sources
-5. Drag to arrange, click "Done Editing" to save
+**Two main sections:**
+- **Dashboards**: Your primary workspace with role-based templates
+- **Settings**: Configuration with 7 tabs (Profile, Dashboards, Plugins, Alerts, Schedules, Notifications, System)
 
-For detailed dashboard documentation, see [Dashboard Guide](docs/dashboard-guide.md).
+### Dashboard System
+
+**12 role-based templates:**
+- **Individual Contributor** (2): Personal Performance, My Activity
+- **Manager** (5): Command Center, Weekly Briefing, Team Performance, Sprint Planning, Team Management
+- **Director** (5): Executive Overview, Organization Scorecard, Team Comparison, Cost & ROI Analysis, Capacity Planning
+- **Admin** (2): System Health, Data Management
+
+**22 interactive widget types:**
+- **Core widgets** (6): Number Card, Timeseries Chart, Bar Chart, Table, Status Indicator, Activity Feed
+- **Advanced widgets** (16): Briefing TL;DR, Attention Items, Talking Points, Team Selector, Team Member Cards, Engineer Table, Unresolved Identities, Sprint Board, Velocity Trend, Timeline Estimator, Plugin List, Event Stream, Alert List, Goal Tracker, Cost Breakdown, Quick Actions
+
+**Dashboard features:**
+- Drag-and-drop layout with responsive grid
+- Real-time data auto-refreshing every 30 seconds
+- Clone and customize any template
+- Set primary dashboard for automatic loading
+- Role-based defaults during onboarding
+
+### Onboarding
+
+**4-step setup wizard:**
+1. **Welcome**: Product introduction and value proposition
+2. **Role Selection**: Choose IC, Manager, Director, or Admin with feature comparison
+3. **Data Source Configuration**: Connect at least one plugin or skip for demo mode
+4. **First Sync**: Initial data sync and dashboard creation
+
+### Detail Views
+
+Click any item in a widget to open detail views:
+- **Team Detail**: Team metrics, members, alerts, actions
+- **Engineer Detail**: Performance, activity, goals, skills
+- **Sprint Detail**: Sprint details, burndown, backlog
+- **Alert Detail**: Rule, history, recommendations, actions
+- **Event Detail**: Event details and related events
+- **Plugin Config**: Configuration form, test, sync
 
 ## Architecture
 
@@ -312,9 +341,12 @@ engineerdna/
 │   └── plugin/             # Plugin system
 ├── plugins/
 │   ├── plugin-sdk/         # Plugin SDK
+│   ├── insights-common/    # Shared AI insights code
 │   ├── github/             # GitHub plugin
 │   ├── csv-import/         # CSV import plugin
-│   └── ai-insights/        # AI insights plugin
+│   ├── claude-insights/    # Anthropic Claude insights
+│   ├── openai-insights/    # OpenAI insights
+│   └── ollama-insights/    # Ollama local insights
 ├── migrations/             # Database migrations
 └── frontend/               # React frontend (embedded)
 ```

@@ -54,6 +54,7 @@ func (s *PlanningStore) GetSprint(id string) (*models.Sprint, error) {
 	var sprint models.Sprint
 	var committedPoints, completedPoints, teamCapacity sql.NullInt64
 	var status, teamID sql.NullString
+	var startDateStr, endDateStr, createdAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, name, start_date, end_date,
@@ -62,9 +63,9 @@ func (s *PlanningStore) GetSprint(id string) (*models.Sprint, error) {
 		FROM sprints
 		WHERE id = ?
 	`, id).Scan(
-		&sprint.ID, &sprint.Name, &sprint.StartDate, &sprint.EndDate,
+		&sprint.ID, &sprint.Name, &startDateStr, &endDateStr,
 		&committedPoints, &completedPoints, &teamCapacity,
-		&status, &teamID, &sprint.CreatedAt,
+		&status, &teamID, &createdAtStr,
 	)
 
 	if err == sql.ErrNoRows {
@@ -73,6 +74,11 @@ func (s *PlanningStore) GetSprint(id string) (*models.Sprint, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sprint: %w", err)
 	}
+
+	// Parse timestamps
+	sprint.StartDate, _ = parseTimestamp(startDateStr)
+	sprint.EndDate, _ = parseTimestamp(endDateStr)
+	sprint.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 	// Handle NULL values
 	if committedPoints.Valid {
@@ -124,15 +130,21 @@ func (s *PlanningStore) ListSprints(limit int) ([]*models.Sprint, error) {
 		var sprint models.Sprint
 		var committedPoints, completedPoints, teamCapacity sql.NullInt64
 		var status, teamID sql.NullString
+		var startDateStr, endDateStr, createdAtStr string
 
 		err := rows.Scan(
-			&sprint.ID, &sprint.Name, &sprint.StartDate, &sprint.EndDate,
+			&sprint.ID, &sprint.Name, &startDateStr, &endDateStr,
 			&committedPoints, &completedPoints, &teamCapacity,
-			&status, &teamID, &sprint.CreatedAt,
+			&status, &teamID, &createdAtStr,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan sprint: %w", err)
 		}
+
+		// Parse timestamps
+		sprint.StartDate, _ = parseTimestamp(startDateStr)
+		sprint.EndDate, _ = parseTimestamp(endDateStr)
+		sprint.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 		if committedPoints.Valid {
 			sprint.CommittedPoints = int(committedPoints.Int64)
@@ -221,15 +233,21 @@ func (s *PlanningStore) GetSprintsByTeam(teamID string, limit int) ([]*models.Sp
 		var sprint models.Sprint
 		var committedPoints, completedPoints, teamCapacity sql.NullInt64
 		var status, teamID sql.NullString
+		var startDateStr, endDateStr, createdAtStr string
 
 		err := rows.Scan(
-			&sprint.ID, &sprint.Name, &sprint.StartDate, &sprint.EndDate,
+			&sprint.ID, &sprint.Name, &startDateStr, &endDateStr,
 			&committedPoints, &completedPoints, &teamCapacity,
-			&status, &teamID, &sprint.CreatedAt,
+			&status, &teamID, &createdAtStr,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan sprint: %w", err)
 		}
+
+		// Parse timestamps
+		sprint.StartDate, _ = parseTimestamp(startDateStr)
+		sprint.EndDate, _ = parseTimestamp(endDateStr)
+		sprint.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 		if committedPoints.Valid {
 			sprint.CommittedPoints = int(committedPoints.Int64)
@@ -296,6 +314,7 @@ func (s *PlanningStore) GetEpic(id string) (*models.Epic, error) {
 	var originalEstimate, currentScope sql.NullInt64
 	var startedAt, completedAt sql.NullTime
 	var status, teamID sql.NullString
+	var createdAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, jira_id, title, description,
@@ -307,7 +326,7 @@ func (s *PlanningStore) GetEpic(id string) (*models.Epic, error) {
 	`, id).Scan(
 		&epic.ID, &jiraID, &epic.Title, &description,
 		&originalEstimate, &currentScope,
-		&epic.CreatedAt, &startedAt, &completedAt,
+		&createdAtStr, &startedAt, &completedAt,
 		&status, &teamID,
 	)
 
@@ -317,6 +336,9 @@ func (s *PlanningStore) GetEpic(id string) (*models.Epic, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get epic: %w", err)
 	}
+
+	// Parse created_at
+	epic.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 	// Handle NULL values
 	if jiraID.Valid {
@@ -380,16 +402,20 @@ func (s *PlanningStore) ListEpics(limit int) ([]*models.Epic, error) {
 		var originalEstimate, currentScope sql.NullInt64
 		var startedAt, completedAt sql.NullTime
 		var status, teamID sql.NullString
+		var createdAtStr string
 
 		err := rows.Scan(
 			&epic.ID, &jiraID, &epic.Title, &description,
 			&originalEstimate, &currentScope,
-			&epic.CreatedAt, &startedAt, &completedAt,
+			&createdAtStr, &startedAt, &completedAt,
 			&status, &teamID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan epic: %w", err)
 		}
+
+		// Parse created_at
+		epic.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 		if jiraID.Valid {
 			epic.JiraID = &jiraID.String
@@ -499,6 +525,7 @@ func (s *PlanningStore) GetStory(id string) (*models.Story, error) {
 	var startedAt, completedAt sql.NullTime
 	var actualDays sql.NullFloat64
 	var assigneeID sql.NullString
+	var createdAtStr string
 
 	err := s.db.QueryRow(`
 		SELECT id, jira_id, epic_id, sprint_id, title,
@@ -510,7 +537,7 @@ func (s *PlanningStore) GetStory(id string) (*models.Story, error) {
 	`, id).Scan(
 		&story.ID, &jiraID, &epicID, &sprintID, &story.Title,
 		&storyPoints, &status,
-		&story.CreatedAt, &startedAt, &completedAt,
+		&createdAtStr, &startedAt, &completedAt,
 		&actualDays, &assigneeID,
 	)
 
@@ -520,6 +547,9 @@ func (s *PlanningStore) GetStory(id string) (*models.Story, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get story: %w", err)
 	}
+
+	// Parse created_at
+	story.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 	// Handle NULL values
 	if jiraID.Valid {
@@ -697,16 +727,20 @@ func (s *PlanningStore) GetStoriesBySprint(sprintID string) ([]*models.Story, er
 		var startedAt, completedAt sql.NullTime
 		var actualDays sql.NullFloat64
 		var assigneeID sql.NullString
+		var createdAtStr string
 
 		err := rows.Scan(
 			&story.ID, &jiraID, &epicID, &sprintIDVal, &story.Title,
 			&storyPoints, &status,
-			&story.CreatedAt, &startedAt, &completedAt,
+			&createdAtStr, &startedAt, &completedAt,
 			&actualDays, &assigneeID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan story: %w", err)
 		}
+
+		// Parse created_at
+		story.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 		if jiraID.Valid {
 			story.JiraID = &jiraID.String
@@ -808,15 +842,20 @@ func (s *PlanningStore) GetCapacityHistory(teamID string, numWeeks int) ([]*mode
 		var teamSize sql.NullInt64
 		var availableEngineers, meetingHours sql.NullFloat64
 		var completedPoints sql.NullInt64
+		var weekStartStr, createdAtStr string
 
 		err := rows.Scan(
-			&h.ID, &h.WeekStart, &h.TeamID, &teamSize,
+			&h.ID, &weekStartStr, &h.TeamID, &teamSize,
 			&availableEngineers, &completedPoints, &meetingHours,
-			&h.CreatedAt,
+			&createdAtStr,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan capacity history: %w", err)
 		}
+
+		// Parse timestamps
+		h.WeekStart, _ = parseTimestamp(weekStartStr)
+		h.CreatedAt, _ = parseTimestamp(createdAtStr)
 
 		if teamSize.Valid {
 			h.TeamSize = int(teamSize.Int64)

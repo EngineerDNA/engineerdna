@@ -64,6 +64,8 @@ func (s *Server) SetupRoutes() {
 	s.mux.HandleFunc("/api/settings/sync-schedule", s.handleSettingsSyncSchedule)
 	s.mux.HandleFunc("/api/settings/anonymization-strategy", s.handleSettingsAnonymizationStrategy)
 	s.mux.HandleFunc("/api/settings/port", s.handleSettingsPort)
+	s.mux.HandleFunc("/api/settings/role", s.handleSettingsRole)
+	s.mux.HandleFunc("/api/settings/primary-dashboard", s.handleSettingsPrimaryDashboard)
 
 	// Roles
 	s.mux.HandleFunc("/api/roles", s.handleRoles)
@@ -196,8 +198,13 @@ func (s *Server) SetupRoutes() {
 
 	// Dashboards
 	s.mux.HandleFunc("/api/dashboards", s.handleDashboards)
+	s.mux.HandleFunc("/api/dashboards/from-template/", s.handleCreateDashboardFromTemplate)
 	s.mux.HandleFunc("/api/dashboards/", s.handleDashboardByID)
 	s.mux.HandleFunc("/api/metrics/snapshots", s.handleMetricSnapshots)
+
+	// Dashboard Templates
+	s.mux.HandleFunc("/api/dashboard-templates", s.handleDashboardTemplates)
+	s.mux.HandleFunc("/api/dashboard-templates/", s.handleDashboardTemplateByID)
 
 	// Frontend - must be registered last to catch all non-API routes
 	s.mux.HandleFunc("/", s.handleFrontend)

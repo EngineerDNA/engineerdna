@@ -177,7 +177,7 @@ After finding ANY issue:
 
 To configure the GitHub plugin:
 
-1. Navigate to the Plugins page
+1. Navigate to Settings → Plugins tab
 2. Click "Configure" next to the GitHub plugin
 3. Enter your GitHub token:
    ```bash

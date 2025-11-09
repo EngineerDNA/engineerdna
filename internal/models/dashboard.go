@@ -16,6 +16,20 @@ type Dashboard struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// DashboardTemplate represents a template for creating new dashboards
+// Used in role-based onboarding
+type DashboardTemplate struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	Role        string    `json:"role,omitempty"`     // ic, manager, director, admin
+	Category    string    `json:"category,omitempty"` // personal, team, org, admin
+	Layout      string    `json:"layout"`             // JSON string
+	IsSystem    bool      `json:"is_system"`          // System templates can't be deleted
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 // DashboardLayout represents the deserialized layout JSON
 type DashboardLayout struct {
 	Widgets []Widget `json:"widgets"`

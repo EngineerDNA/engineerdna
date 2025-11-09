@@ -12,7 +12,7 @@ import (
 func SeedAlerts(data *SeedData) (alertRuleIDs, alertInstanceIDs []string) {
 	fmt.Println("\n10. Creating alert system data...")
 
-	// Alert Rules
+	// Alert Rules (only using supported types: pr_review_waiting, score_drop, burnout_signal, sprint_behind)
 	alertRules := []struct {
 		name      string
 		alertType string
@@ -22,10 +22,9 @@ func SeedAlerts(data *SeedData) (alertRuleIDs, alertInstanceIDs []string) {
 		target    string
 		targetID  *string
 	}{
-		{"High Cycle Time Alert", "cycle_time_high", "warning", utils.PtrFloat64(48.0), ">", "org", nil},
-		{"Low Velocity Alert", "velocity_drop", "warning", utils.PtrFloat64(0.8), "<", "team", &data.BackendTeam.ID},
-		{"PR Queue Buildup", "pr_queue", "critical", utils.PtrFloat64(10.0), ">", "team", &data.FrontendTeam.ID},
-		{"Test Coverage Drop", "coverage_drop", "warning", utils.PtrFloat64(70.0), "<", "team", &data.PlatformTeam.ID},
+		{"PR Review Waiting Too Long", "pr_review_waiting", "warning", utils.PtrFloat64(24.0), ">", "org", nil},
+		{"Performance Score Drop", "score_drop", "warning", utils.PtrFloat64(15.0), ">", "team", &data.BackendTeam.ID},
+		{"Sprint Behind Schedule", "sprint_behind", "critical", utils.PtrFloat64(20.0), ">", "team", &data.FrontendTeam.ID},
 		{"Burnout Risk", "burnout_signal", "critical", nil, "", "engineer", &data.EngineerIDs[6]}, // Maya Patel
 	}
 
@@ -61,11 +60,10 @@ func SeedAlerts(data *SeedData) (alertRuleIDs, alertInstanceIDs []string) {
 		dismissed  bool
 		resolved   bool
 	}{
-		{0, "Backend cycle time exceeds 48 hours", "Average cycle time for Backend team is 52 hours, above threshold of 48 hours", "team", &data.BackendTeam.ID, true, false, false},
-		{1, "Backend team velocity dropped 25%", "Sprint velocity dropped from 45 to 34 story points", "team", &data.BackendTeam.ID, false, false, false},
-		{2, "10+ PRs waiting for review", "Frontend team has 12 PRs waiting for review, blocking progress", "team", &data.FrontendTeam.ID, true, false, true},
-		{3, "Test coverage below 70%", "Platform team coverage is 65%, below target of 70%", "team", &data.PlatformTeam.ID, false, true, false},
-		{4, "High workload detected for Maya Patel", "Working hours exceed 50hrs/week for 3 consecutive weeks", "engineer", &data.EngineerIDs[6], true, false, false},
+		{0, "PR waiting for review: Implement caching layer", "Pull request has been waiting for review for 28.5 hours (threshold: 24 hours)", "pr", nil, true, false, false},
+		{1, "Performance score drop: Backend Team", "Score dropped 18.5% (from 85.0 to 69.2)", "team", &data.BackendTeam.ID, false, false, false},
+		{2, "Sprint behind pace: Frontend Sprint 47", "Sprint is 22.0% behind expected progress (15/40 points completed, 50% expected)", "sprint", nil, true, false, true},
+		{3, "High workload detected for Maya Patel", "Working hours exceed 50hrs/week for 3 consecutive weeks", "engineer", &data.EngineerIDs[6], true, false, false},
 	}
 
 	alertInstanceIDs = make([]string, 0)

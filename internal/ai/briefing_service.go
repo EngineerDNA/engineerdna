@@ -318,7 +318,7 @@ Respond in JSON:
 	return prompt
 }
 
-// callAIPlugin invokes the ai-insights plugin to generate the briefing
+// callAIPlugin invokes an AI insights plugin (claude-insights, openai-insights, or ollama-insights) to generate the briefing
 func (s *BriefingService) callAIPlugin(ctx context.Context, prompt string) (*models.BriefingResponse, error) {
 	// V1 Implementation Note: This returns sample data for demonstration purposes.
 	// Real AI plugin integration will be added in a future release when plugin SDK

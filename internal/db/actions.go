@@ -49,7 +49,7 @@ func (s *ActionsStore) CreateRecommendation(rec *models.Recommendation) error {
 func (s *ActionsStore) GetRecommendation(id string) (*models.Recommendation, error) {
 	var rec models.Recommendation
 	var sourceID, subjectID, suggestedActionsJSON, context, assignedTo sql.NullString
-	var expiresAt sql.NullString
+	var expiresAt, createdAtStr sql.NullString
 
 	err := s.db.QueryRow(`
 		SELECT id, source_type, source_id, recommendation_type, priority,
@@ -59,7 +59,7 @@ func (s *ActionsStore) GetRecommendation(id string) (*models.Recommendation, err
 		WHERE id = ?
 	`, id).Scan(&rec.ID, &rec.SourceType, &sourceID, &rec.RecommendationType, &rec.Priority,
 		&rec.SubjectType, &subjectID, &rec.Title, &rec.Description, &suggestedActionsJSON,
-		&context, &assignedTo, &rec.CreatedAt, &expiresAt, &rec.Status)
+		&context, &assignedTo, &createdAtStr, &expiresAt, &rec.Status)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -86,8 +86,11 @@ func (s *ActionsStore) GetRecommendation(id string) (*models.Recommendation, err
 		at := assignedTo.String
 		rec.AssignedTo = &at
 	}
+	if createdAtStr.Valid {
+		rec.CreatedAt, _ = parseTimestamp(createdAtStr.String)
+	}
 	if expiresAt.Valid {
-		t, _ := time.Parse(time.RFC3339, expiresAt.String)
+		t, _ := parseTimestamp(expiresAt.String)
 		rec.ExpiresAt = &t
 	}
 
@@ -157,11 +160,11 @@ func (s *ActionsStore) ListRecommendations(filters map[string]string, limit, off
 	for rows.Next() {
 		var rec models.Recommendation
 		var sourceID, subjectID, suggestedActionsJSON, context, assignedTo sql.NullString
-		var expiresAt sql.NullString
+		var expiresAt, createdAtStr sql.NullString
 
 		err := rows.Scan(&rec.ID, &rec.SourceType, &sourceID, &rec.RecommendationType, &rec.Priority,
 			&rec.SubjectType, &subjectID, &rec.Title, &rec.Description, &suggestedActionsJSON,
-			&context, &assignedTo, &rec.CreatedAt, &expiresAt, &rec.Status)
+			&context, &assignedTo, &createdAtStr, &expiresAt, &rec.Status)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan recommendation: %w", err)
 		}
@@ -184,8 +187,11 @@ func (s *ActionsStore) ListRecommendations(filters map[string]string, limit, off
 			at := assignedTo.String
 			rec.AssignedTo = &at
 		}
+		if createdAtStr.Valid {
+			rec.CreatedAt, _ = parseTimestamp(createdAtStr.String)
+		}
 		if expiresAt.Valid {
-			t, _ := time.Parse(time.RFC3339, expiresAt.String)
+			t, _ := parseTimestamp(expiresAt.String)
 			rec.ExpiresAt = &t
 		}
 
@@ -270,7 +276,7 @@ func (s *ActionsStore) CreateAction(action *models.Action) error {
 func (s *ActionsStore) GetAction(id string) (*models.Action, error) {
 	var action models.Action
 	var recommendationID, subjectID, evidence, expectedOutcome sql.NullString
-	var followUpDate sql.NullString
+	var followUpDate, takenAtStr sql.NullString
 
 	err := s.db.QueryRow(`
 		SELECT id, recommendation_id, action_type, subject_type, subject_id,
@@ -279,7 +285,7 @@ func (s *ActionsStore) GetAction(id string) (*models.Action, error) {
 		FROM actions
 		WHERE id = ?
 	`, id).Scan(&action.ID, &recommendationID, &action.ActionType, &action.SubjectType, &subjectID,
-		&action.Title, &action.Description, &action.TakenBy, &action.TakenAt, &evidence,
+		&action.Title, &action.Description, &action.TakenBy, &takenAtStr, &evidence,
 		&expectedOutcome, &followUpDate)
 
 	if err == sql.ErrNoRows {
@@ -303,8 +309,11 @@ func (s *ActionsStore) GetAction(id string) (*models.Action, error) {
 	if expectedOutcome.Valid {
 		action.ExpectedOutcome = expectedOutcome.String
 	}
+	if takenAtStr.Valid {
+		action.TakenAt, _ = parseTimestamp(takenAtStr.String)
+	}
 	if followUpDate.Valid {
-		t, _ := time.Parse(time.RFC3339, followUpDate.String)
+		t, _ := parseTimestamp(followUpDate.String)
 		action.FollowUpDate = &t
 	}
 
@@ -355,10 +364,10 @@ func (s *ActionsStore) ListActions(filters map[string]string, limit int) ([]*mod
 	for rows.Next() {
 		var action models.Action
 		var recommendationID, subjectID, evidence, expectedOutcome sql.NullString
-		var followUpDate sql.NullString
+		var followUpDate, takenAtStr sql.NullString
 
 		err := rows.Scan(&action.ID, &recommendationID, &action.ActionType, &action.SubjectType, &subjectID,
-			&action.Title, &action.Description, &action.TakenBy, &action.TakenAt, &evidence,
+			&action.Title, &action.Description, &action.TakenBy, &takenAtStr, &evidence,
 			&expectedOutcome, &followUpDate)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan action: %w", err)
@@ -378,8 +387,11 @@ func (s *ActionsStore) ListActions(filters map[string]string, limit int) ([]*mod
 		if expectedOutcome.Valid {
 			action.ExpectedOutcome = expectedOutcome.String
 		}
+		if takenAtStr.Valid {
+			action.TakenAt, _ = parseTimestamp(takenAtStr.String)
+		}
 		if followUpDate.Valid {
-			t, _ := time.Parse(time.RFC3339, followUpDate.String)
+			t, _ := parseTimestamp(followUpDate.String)
 			action.FollowUpDate = &t
 		}
 
@@ -431,11 +443,11 @@ func (s *ActionsStore) GetActionOutcomes(actionID string) ([]*models.ActionOutco
 		var outcome models.ActionOutcome
 		var beforeValue, afterValue, changePercentage sql.NullFloat64
 		var timeToImpactDays sql.NullInt64
-		var notes sql.NullString
+		var notes, measuredAtStr sql.NullString
 
 		err := rows.Scan(&outcome.ID, &outcome.ActionID, &outcome.OutcomeType, &outcome.MeasuredMetric, &beforeValue,
 			&afterValue, &changePercentage, &timeToImpactDays,
-			&outcome.Effectiveness, &notes, &outcome.MeasuredAt)
+			&outcome.Effectiveness, &notes, &measuredAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan action outcome: %w", err)
 		}
@@ -458,6 +470,9 @@ func (s *ActionsStore) GetActionOutcomes(actionID string) ([]*models.ActionOutco
 		}
 		if notes.Valid {
 			outcome.Notes = notes.String
+		}
+		if measuredAtStr.Valid {
+			outcome.MeasuredAt, _ = parseTimestamp(measuredAtStr.String)
 		}
 
 		outcomes = append(outcomes, &outcome)
@@ -501,9 +516,9 @@ func (s *ActionsStore) GetRecommendationHistory(recommendationID string) ([]*mod
 	var history []*models.RecommendationHistory
 	for rows.Next() {
 		var h models.RecommendationHistory
-		var changedBy, reason sql.NullString
+		var changedBy, reason, changedAtStr sql.NullString
 
-		err := rows.Scan(&h.ID, &h.RecommendationID, &h.StatusChange, &changedBy, &reason, &h.ChangedAt)
+		err := rows.Scan(&h.ID, &h.RecommendationID, &h.StatusChange, &changedBy, &reason, &changedAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan recommendation history: %w", err)
 		}
@@ -514,6 +529,9 @@ func (s *ActionsStore) GetRecommendationHistory(recommendationID string) ([]*mod
 		}
 		if reason.Valid {
 			h.Reason = reason.String
+		}
+		if changedAtStr.Valid {
+			h.ChangedAt, _ = parseTimestamp(changedAtStr.String)
 		}
 
 		history = append(history, &h)
@@ -557,9 +575,9 @@ func (s *ActionsStore) GetFollowUpsDue(dueDate time.Time) ([]*models.FollowUp, e
 	for rows.Next() {
 		var followUp models.FollowUp
 		var description sql.NullString
-		var completedAt sql.NullString
+		var completedAt, followUpDateStr sql.NullString
 
-		err := rows.Scan(&followUp.ID, &followUp.ActionID, &followUp.FollowUpDate,
+		err := rows.Scan(&followUp.ID, &followUp.ActionID, &followUpDateStr,
 			&followUp.FollowUpType, &description, &followUp.Completed, &completedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan follow-up: %w", err)
@@ -568,8 +586,11 @@ func (s *ActionsStore) GetFollowUpsDue(dueDate time.Time) ([]*models.FollowUp, e
 		if description.Valid {
 			followUp.Description = description.String
 		}
+		if followUpDateStr.Valid {
+			followUp.FollowUpDate, _ = parseTimestamp(followUpDateStr.String)
+		}
 		if completedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, completedAt.String)
+			t, _ := parseTimestamp(completedAt.String)
 			followUp.CompletedAt = &t
 		}
 

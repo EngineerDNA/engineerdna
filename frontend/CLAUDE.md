@@ -16,9 +16,13 @@ frontend/
 ├── src/
 │   ├── main.tsx, App.tsx          # Entry and routing
 │   ├── api/                        # API client + types
-│   ├── hooks/                      # useEvents, usePlugins, useInsights
-│   ├── components/                 # Dashboard, EventList, PluginCard, charts/
-│   └── pages/                      # DashboardPage, PluginsPage, EventsPage
+│   ├── hooks/                      # useEvents, usePlugins, useDashboardTemplates
+│   ├── components/
+│   │   ├── dashboards/             # Dashboard grid, widgets, selectors
+│   │   ├── settings/               # Settings tabs (7 tabs)
+│   │   ├── onboarding/             # 4-step wizard
+│   │   └── widgets/                # 22 widget types
+│   └── pages/                      # DashboardsPage, DashboardViewer, SettingsPage
 ```
 
 ## Critical Rules
@@ -56,6 +60,7 @@ npm run build        # Production build → dist/
 ```
 
 Production build:
+
 ```bash
 cd frontend && npm run build
 cd .. && make build  # Embeds frontend/dist/ in Go binary
@@ -69,6 +74,7 @@ cd .. && make build  # Embeds frontend/dist/ in Go binary
 **Rule**: Separate data fetching from UI rendering
 
 **Presentational Components** (`components/`):
+
 ```typescript
 // CORRECT - Pure presentational component
 interface DashboardProps {
@@ -84,6 +90,7 @@ export function Dashboard({ events, insights, isLoading }: DashboardProps) {
 ```
 
 **Container Components** (`pages/`):
+
 ```typescript
 // CORRECT - Container handles data fetching
 export function DashboardPage() {
@@ -101,6 +108,7 @@ export function DashboardPage() {
 ```
 
 **Anti-Patterns** (DO NOT DO):
+
 ```typescript
 // WRONG - Component doing data fetching
 export function Dashboard() {
@@ -202,18 +210,21 @@ export interface ConfigField {
 **REQUIRED for all new components**:
 
 1. **Background colors**: Always provide dark variants
+
    ```tsx
    bg-white dark:bg-gray-800
    bg-gray-100 dark:bg-gray-900
    ```
 
 2. **Text colors**: Always provide dark variants
+
    ```tsx
    text-gray-900 dark:text-gray-100
    text-gray-600 dark:text-gray-400
    ```
 
 3. **Borders**: Always provide dark variants
+
    ```tsx
    border-gray-300 dark:border-gray-600
    ```
@@ -283,16 +294,22 @@ function DashboardPage() {
   const { data: events, isLoading, error, refetch } = useEvents();
 
   if (isLoading) {
-    return <div className="flex justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-    </div>;
+    return (
+      <div className="flex justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="p-4 bg-red-50 border border-red-200 rounded">
-      <p className="text-red-800">Failed: {error.message}</p>
-      <button onClick={() => refetch()} className="mt-2 text-blue-600">Retry</button>
-    </div>;
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded">
+        <p className="text-red-800">Failed: {error.message}</p>
+        <button onClick={() => refetch()} className="mt-2 text-blue-600">
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return <EventList events={events} />;
@@ -313,7 +330,12 @@ function PluginConfigForm({ plugin }: { plugin: Plugin }) {
   });
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(config); }}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutation.mutate(config);
+      }}
+    >
       {plugin.config_fields.map((field) => (
         <div key={field.name}>
           <label className="block text-sm font-medium">{field.name}</label>
@@ -326,8 +348,11 @@ function PluginConfigForm({ plugin }: { plugin: Plugin }) {
           />
         </div>
       ))}
-      <button type="submit" disabled={mutation.isPending}
-        className="px-4 py-2 bg-blue-600 text-white rounded">
+      <button
+        type="submit"
+        disabled={mutation.isPending}
+        className="px-4 py-2 bg-blue-600 text-white rounded"
+      >
         {mutation.isPending ? 'Saving...' : 'Save'}
       </button>
     </form>
