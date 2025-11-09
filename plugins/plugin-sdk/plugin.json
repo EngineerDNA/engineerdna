@@ -1,0 +1,8 @@
+{
+  "name": "plugin-sdk",
+  "version": "0.1.0",
+  "type": "library",
+  "description": "EngineerDNA Plugin SDK - Go library for plugin development. This is not an executable plugin.",
+  "entrypoint": "",
+  "config_fields": []
+}

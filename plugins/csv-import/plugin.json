@@ -1,0 +1,21 @@
+{
+  "name": "csv-import",
+  "version": "0.1.0",
+  "type": "source",
+  "description": "Import engineering metrics from CSV files",
+  "author": "EngineerDNA",
+  "config_fields": [
+    {
+      "name": "file_path",
+      "type": "string",
+      "required": true,
+      "description": "Path to CSV file",
+      "secret": false
+    }
+  ],
+  "anonymization": {
+    "required": false,
+    "strategy": "sequential",
+    "fields": ["actor"]
+  }
+}

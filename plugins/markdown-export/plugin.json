@@ -1,0 +1,39 @@
+{
+  "name": "markdown-export",
+  "version": "0.1.0",
+  "type": "destination",
+  "description": "Export metrics to Markdown format",
+  "author": "EngineerDNA",
+  "config_fields": [
+    {
+      "name": "output_file",
+      "type": "string",
+      "required": false,
+      "description": "Output file path (defaults to report-YYYY-MM-DD.md in ~/.engineerdna/exports/)",
+      "secret": false,
+      "default": ""
+    },
+    {
+      "name": "include_toc",
+      "type": "boolean",
+      "required": false,
+      "description": "Include table of contents",
+      "secret": false,
+      "default": "true"
+    },
+    {
+      "name": "format_style",
+      "type": "select",
+      "required": false,
+      "description": "Markdown formatting style",
+      "secret": false,
+      "default": "github",
+      "options": ["github", "gitlab", "plain"]
+    }
+  ],
+  "anonymization": {
+    "required": false,
+    "strategy": "sequential",
+    "fields": ["actor", "author"]
+  }
+}

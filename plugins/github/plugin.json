@@ -1,0 +1,51 @@
+{
+  "name": "github",
+  "version": "0.1.0",
+  "type": "source",
+  "description": "GitHub Issues and Pull Requests",
+  "author": "EngineerDNA",
+  "config_fields": [
+    {
+      "name": "token",
+      "type": "password",
+      "required": true,
+      "description": "GitHub Personal Access Token",
+      "secret": true
+    },
+    {
+      "name": "org",
+      "type": "string",
+      "required": true,
+      "description": "Organization name"
+    },
+    {
+      "name": "repos",
+      "type": "string",
+      "required": false,
+      "description": "Comma-separated repo names (empty = all repos)",
+      "secret": false
+    }
+  ],
+  "anonymization": {
+    "required": false,
+    "strategy": "sequential",
+    "fields": ["actor", "author", "assignee"]
+  },
+  "provides_event_types": [
+    {
+      "type": "pull_request",
+      "normalized_type": "code_review",
+      "description": "Pull request created, updated, merged, or closed"
+    },
+    {
+      "type": "issue",
+      "normalized_type": "work_item",
+      "description": "Issue created, updated, or closed"
+    },
+    {
+      "type": "commit",
+      "normalized_type": "code_change",
+      "description": "Commit pushed to repository"
+    }
+  ]
+}

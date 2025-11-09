@@ -1,0 +1,327 @@
+# ============================================================================
+# EngineerDNA .gitattributes
+# ============================================================================
+# This file controls how Git handles line endings, diffs, and file metadata
+# across different operating systems.
+#
+# References:
+# - https://git-scm.com/docs/gitattributes
+# - https://github.com/github-linguist/linguist/blob/master/docs/overrides.md
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Auto-detect text files and normalize line endings to LF
+# ----------------------------------------------------------------------------
+* text=auto eol=lf
+
+# ----------------------------------------------------------------------------
+# Source Code
+# ----------------------------------------------------------------------------
+# Go
+*.go text eol=lf diff=go
+
+# Go templates
+*.tmpl text eol=lf
+*.gotmpl text eol=lf
+
+# Go module files
+go.mod text eol=lf diff=go
+go.sum text eol=lf diff=go
+
+# JavaScript/TypeScript
+*.js text eol=lf diff=javascript
+*.jsx text eol=lf diff=javascript
+*.ts text eol=lf diff=typescript
+*.tsx text eol=lf diff=typescript
+*.mjs text eol=lf diff=javascript
+*.cjs text eol=lf diff=javascript
+
+# Web
+*.html text eol=lf diff=html
+*.css text eol=lf diff=css
+*.scss text eol=lf diff=css
+*.sass text eol=lf diff=css
+*.less text eol=lf diff=css
+
+# JSON
+*.json text eol=lf
+*.jsonc text eol=lf
+*.json5 text eol=lf
+
+# YAML
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# TOML
+*.toml text eol=lf
+
+# XML
+*.xml text eol=lf
+*.svg text eol=lf
+
+# SQL
+*.sql text eol=lf
+
+# ----------------------------------------------------------------------------
+# Scripts (Must use LF for Unix compatibility)
+# ----------------------------------------------------------------------------
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+*.fish text eol=lf
+
+# Python
+*.py text eol=lf diff=python
+
+# Ruby
+*.rb text eol=lf diff=ruby
+
+# Perl
+*.pl text eol=lf diff=perl
+*.pm text eol=lf diff=perl
+
+# Makefile (must use tabs, not spaces)
+Makefile text eol=lf
+*.mk text eol=lf
+*.make text eol=lf
+
+# ----------------------------------------------------------------------------
+# Documentation
+# ----------------------------------------------------------------------------
+*.md text eol=lf diff=markdown
+*.markdown text eol=lf diff=markdown
+*.mdx text eol=lf diff=markdown
+*.txt text eol=lf
+*.rst text eol=lf
+*.adoc text eol=lf
+
+# ----------------------------------------------------------------------------
+# Configuration Files
+# ----------------------------------------------------------------------------
+*.conf text eol=lf
+*.config text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.editorconfig text eol=lf
+
+# Docker
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+.dockerignore text eol=lf
+docker-compose*.yml text eol=lf
+
+# Git
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.gitmodules text eol=lf
+.gitkeep text eol=lf
+
+# CI/CD
+.travis.yml text eol=lf
+.gitlab-ci.yml text eol=lf
+appveyor.yml text eol=lf
+*.jenkinsfile text eol=lf
+Jenkinsfile text eol=lf
+
+# GitHub
+.github/**/*.yml text eol=lf
+.github/**/*.yaml text eol=lf
+.github/**/*.md text eol=lf
+
+# NPM/Yarn
+package.json text eol=lf
+package-lock.json text eol=lf linguist-generated=true
+yarn.lock text eol=lf linguist-generated=true
+pnpm-lock.yaml text eol=lf linguist-generated=true
+.npmrc text eol=lf
+.yarnrc text eol=lf
+.nvmrc text eol=lf
+
+# Editor configs
+.editorconfig text eol=lf
+.prettierrc text eol=lf
+.prettierignore text eol=lf
+.eslintrc text eol=lf
+.eslintignore text eol=lf
+tsconfig.json text eol=lf
+tsconfig*.json text eol=lf
+jsconfig.json text eol=lf
+
+# Claude Code
+.claude/**/*.md text eol=lf
+.claude/**/*.json text eol=lf
+.claude/**/*.py text eol=lf
+.claude/**/*.sh text eol=lf
+
+# ----------------------------------------------------------------------------
+# Binary Files (No line ending conversion)
+# ----------------------------------------------------------------------------
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg binary
+*.bmp binary
+*.tiff binary
+*.tif binary
+
+# Audio
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.flac binary
+*.m4a binary
+
+# Video
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.mkv binary
+*.webm binary
+
+# Fonts
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+
+# Archives (Should not be in repo, but mark as binary)
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.7z binary
+*.rar binary
+
+# Executables & Libraries
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.o binary
+
+# Database files
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# Protocol Buffers
+*.pb binary
+
+# PDF
+*.pdf binary diff=astextplain
+
+# Office documents
+*.doc binary diff=astextplain
+*.docx binary diff=astextplain
+*.xls binary diff=astextplain
+*.xlsx binary diff=astextplain
+*.ppt binary diff=astextplain
+*.pptx binary diff=astextplain
+
+# ----------------------------------------------------------------------------
+# Special Handling
+# ----------------------------------------------------------------------------
+# License files (no modification)
+LICENSE text eol=lf
+LICENSE.* text eol=lf
+COPYING text eol=lf
+
+# Changelog (standardized format)
+CHANGELOG.md text eol=lf merge=union
+
+# README
+README.md text eol=lf
+
+# Environment examples (templates)
+.env.example text eol=lf
+.env.template text eol=lf
+
+# ----------------------------------------------------------------------------
+# GitHub Linguist Overrides
+# ----------------------------------------------------------------------------
+# Exclude generated files from language statistics
+**/vendor/** linguist-vendored
+**/node_modules/** linguist-vendored
+**/dist/** linguist-generated
+**/build/** linguist-generated
+**/*.min.js linguist-generated
+**/*.min.css linguist-generated
+package-lock.json linguist-generated
+yarn.lock linguist-generated
+pnpm-lock.yaml linguist-generated
+go.sum linguist-generated
+
+# Documentation
+*.md linguist-documentation
+
+# Claude Code agent files (mark as documentation)
+.claude/agents/*.md linguist-documentation
+.claude/skills/**/*.md linguist-documentation
+
+# Specify vendored code (if any third-party code is committed)
+# internal/vendor/** linguist-vendored
+
+# ----------------------------------------------------------------------------
+# Diff Handling for Special Files
+# ----------------------------------------------------------------------------
+# Go coverage reports (treat as binary for cleaner diffs)
+*.out binary
+
+# Lockfiles (show full diff, don't merge automatically)
+package-lock.json -diff merge=ours
+yarn.lock -diff merge=ours
+pnpm-lock.yaml -diff merge=ours
+go.sum -diff merge=ours
+
+# ----------------------------------------------------------------------------
+# Merge Strategies
+# ----------------------------------------------------------------------------
+# CHANGELOG: union merge (combine both versions, no conflicts)
+CHANGELOG.md merge=union
+
+# Package locks: use ours (regenerate after merge)
+package-lock.json merge=ours
+yarn.lock merge=ours
+pnpm-lock.yaml merge=ours
+
+# ----------------------------------------------------------------------------
+# Export Ignore (for git archive/export)
+# ----------------------------------------------------------------------------
+# Development and CI files not needed in releases
+.gitattributes export-ignore
+.gitignore export-ignore
+.github/ export-ignore
+.claude/ export-ignore
+.editorconfig export-ignore
+.eslintrc export-ignore
+.prettierrc export-ignore
+*.test.go export-ignore
+*_test.go export-ignore
+**/*_test.go export-ignore
+test/ export-ignore
+tests/ export-ignore
+__tests__/ export-ignore
+
+# ----------------------------------------------------------------------------
+# Notes
+# ----------------------------------------------------------------------------
+# Line ending rules (eol=lf):
+# - All text files use Unix-style LF line endings
+# - Git will checkout files with LF on all platforms
+# - Git will convert CRLF to LF on commit (if text=auto detects text)
+#
+# Executable permissions:
+# - Git preserves executable bits in the index
+# - Use: git add --chmod=+x file.sh to set executable
+# - Use: git ls-files --stage to check permissions
+#
+# Binary files:
+# - Marked as binary to prevent line ending conversion
+# - No diffs generated (shows "Binary files differ")
+# - Can use diff=astextplain for basic text extraction from Office docs

@@ -1,0 +1,44 @@
+{
+  "name": "google-sheets-export",
+  "version": "0.1.0",
+  "type": "destination",
+  "description": "Export metrics to Google Sheets",
+  "author": "EngineerDNA",
+  "oauth": {
+    "provider": "google",
+    "scopes": ["https://www.googleapis.com/auth/spreadsheets"]
+  },
+  "config_fields": [
+    {
+      "name": "credentials_json",
+      "type": "password",
+      "required": true,
+      "description": "OAuth client credentials JSON",
+      "secret": true
+    },
+    {
+      "name": "spreadsheet_id",
+      "type": "string",
+      "required": true,
+      "description": "Google Sheets document ID"
+    },
+    {
+      "name": "sheet_name",
+      "type": "string",
+      "required": false,
+      "description": "Sheet tab name",
+      "default": "EngineerDNA"
+    },
+    {
+      "name": "export_mode",
+      "type": "select",
+      "options": ["raw", "aggregated"],
+      "required": true,
+      "description": "Export format: raw events or aggregated metrics"
+    }
+  ],
+  "schedule": {
+    "supported": true,
+    "default": "weekly"
+  }
+}
